@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+<title id="title">LokSanket — Modern Minimal</title>
+<desc id="desc">Minimal LokSanket mark combining an L, people and growth.</desc>
+<rect width="1200" height="360" fill="#ffffff"/>
+<path d="M70 72h52v154h110v48H70z" fill="#4F35C9"/>
+<circle cx="151" cy="80" r="18" fill="#F6C99B"/>
+<path d="M132 190c-24-36-17-71 12-92 30 26 36 57 18 92z" fill="#B9B0F5"/>
+<path d="M159 207c5-38 29-63 61-67 8 35-11 65-61 67z" fill="#76B98B"/>
+<path d="M119 217c-17-29-11-56 10-74 24 19 28 43 10 74z" fill="#4D5FD1" opacity=".9"/>
+<text x="292" y="170" font-family="Arial, Helvetica, sans-serif" font-size="94" font-weight="800" letter-spacing="-4" fill="#4F35C9">LokSanket</text>
+<text x="296" y="218" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="500" letter-spacing="6" fill="#24324A">CIVIC DEVELOPMENT INTELLIGENCE</text>
+</svg>
