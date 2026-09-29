@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "cluster": "tsx scripts/run-clustering.ts",
+    "priority": "tsx scripts/run-priority.ts",
+    "test:priority": "tsx scripts/test-priority.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

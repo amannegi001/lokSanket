@@ -131,14 +131,20 @@ Extract structured intelligence from this complaint according to the schema.
         },
       });
 
-      const text = response.text;
-      if (!text) {
+      const rawResponseText = response.text || "";
+      if (!rawResponseText.trim()) {
         throw new Error(`Empty response from Gemini model ${model}`);
       }
 
-      const parsed = JSON.parse(text) as ExtractedComplaint;
+      // Strip markdown code fences if included
+      const cleanedJson = rawResponseText
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
 
-      // Validate and sanitize values
+      const parsed = JSON.parse(cleanedJson) as ExtractedComplaint;
+
+      // Validate and sanitize severity
       const validSeverities: ExtractedComplaint["severity"][] = [
         "low",
         "medium",
@@ -150,18 +156,18 @@ Extract structured intelligence from this complaint according to the schema.
         : "medium";
 
       return {
-        category: parsed.category?.trim() || "General Civic Issue",
-        subcategory: parsed.subcategory?.trim() || "Uncategorized",
+        category: (typeof parsed.category === "string" && parsed.category.trim()) || "Civic Grievance",
+        subcategory: (typeof parsed.subcategory === "string" && parsed.subcategory.trim()) || "General Issue",
         severity,
-        summary: parsed.summary?.trim() || rawText.slice(0, 200),
-        language: (parsed.language || "unknown").toLowerCase().trim(),
+        summary: (typeof parsed.summary === "string" && parsed.summary.trim()) || rawText.slice(0, 200),
+        language: (typeof parsed.language === "string" && parsed.language.toLowerCase().trim()) || "unknown",
         affectedGroups: Array.isArray(parsed.affectedGroups)
           ? parsed.affectedGroups.map((g) => String(g).trim()).filter(Boolean)
           : [],
         keywords: Array.isArray(parsed.keywords)
           ? parsed.keywords.map((k) => String(k).trim()).filter(Boolean)
           : [],
-        normalizedText: parsed.normalizedText?.trim() || parsed.summary || rawText,
+        normalizedText: (typeof parsed.normalizedText === "string" && parsed.normalizedText.trim()) || parsed.summary || rawText,
       };
     } catch (err: unknown) {
       lastError = err;

@@ -100,22 +100,15 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       setError(null);
-      const [dashRes, clustersRes] = await Promise.all([
-        fetch("/api/dashboard"),
-        fetch("/api/priorities?limit=100"),
-      ]);
-
+      const dashRes = await fetch("/api/dashboard");
       const dashJson = await dashRes.json();
-      const clustersJson = await clustersRes.json();
 
       if (!dashRes.ok || !dashJson.success) {
         throw new Error(dashJson.error || "Failed to load dashboard data");
       }
 
       setData(dashJson.data);
-      if (clustersJson.success) {
-        setAllClusters(clustersJson.clusters);
-      }
+      setAllClusters(dashJson.data.clusters || dashJson.data.topClusters || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error loading dashboard");
     } finally {
@@ -128,13 +121,8 @@ export default function DashboardPage() {
 
     async function initialLoad() {
       try {
-        const [dashRes, clustersRes] = await Promise.all([
-          fetch("/api/dashboard"),
-          fetch("/api/priorities?limit=100"),
-        ]);
-
+        const dashRes = await fetch("/api/dashboard");
         const dashJson = await dashRes.json();
-        const clustersJson = await clustersRes.json();
 
         if (ignore) return;
 
@@ -143,9 +131,7 @@ export default function DashboardPage() {
         }
 
         setData(dashJson.data);
-        if (clustersJson.success) {
-          setAllClusters(clustersJson.clusters);
-        }
+        setAllClusters(dashJson.data.clusters || dashJson.data.topClusters || []);
       } catch (err: unknown) {
         if (!ignore) {
           setError(err instanceof Error ? err.message : "Error loading dashboard");
@@ -300,10 +286,10 @@ export default function DashboardPage() {
                 <FileText className="w-4 h-4 text-slate-400" />
               </div>
               <div className="text-3xl font-black text-slate-900 tracking-tight mt-1.5">
-                {data.kpis.totalReports.toLocaleString()}
+                {data.kpis?.totalReports?.toLocaleString() ?? 0}
               </div>
               <div className="text-xs text-slate-500 mt-1">
-                Across 10 civic categories
+                Across {data.categoryDistribution?.length ?? 9} civic categories
               </div>
             </div>
 
@@ -413,11 +399,21 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {displayedClusters.map((cluster) => {
-                    const trend = cluster.evidence?.trendPercent ?? 0;
-                    const isPositiveTrend = trend > 0;
+                  {displayedClusters.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="py-10 text-center text-slate-400 italic"
+                      >
+                        No civic issues found matching the selected filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    displayedClusters.map((cluster) => {
+                      const trend = cluster.evidence?.trendPercent ?? 0;
+                      const isPositiveTrend = trend > 0;
 
-                    return (
+                      return (
                       <tr
                         key={cluster._id}
                         className={`hover:bg-slate-50/80 transition-colors ${
@@ -515,8 +511,9 @@ export default function DashboardPage() {
                         </td>
                       </tr>
                     );
-                  })}
-                </tbody>
+                  })
+                )}
+              </tbody>
               </table>
             </div>
 
@@ -602,7 +599,7 @@ export default function DashboardPage() {
                   <Layers className="w-4 h-4 text-slate-400" />
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Relative demand volume across all 10 civic areas
+                  Relative demand volume across all {data.categoryDistribution?.length ?? 9} civic categories
                 </p>
               </div>
 

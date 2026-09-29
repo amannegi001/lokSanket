@@ -130,6 +130,9 @@ export interface Translations {
     successSubtitle: string;
     refIdLabel: string;
     categoryLabel: string;
+    subcategoryLabel: string;
+    severityLabel: string;
+    affectedGroupsLabel: string;
     viewInsightsBtn: string;
     reportAnotherBtn: string;
   };
@@ -338,6 +341,9 @@ export const translations: Record<Language, Translations> = {
         "LokSanket will analyze this report alongside other citizen inputs to identify recurring local issues and development patterns.",
       refIdLabel: "Reference ID:",
       categoryLabel: "Identified Category:",
+      subcategoryLabel: "Subcategory:",
+      severityLabel: "Severity Assessment:",
+      affectedGroupsLabel: "Impacted Demographics:",
       viewInsightsBtn: "View in Development Insights",
       reportAnotherBtn: "Report Another Issue",
     },
@@ -544,6 +550,9 @@ export const translations: Record<Language, Translations> = {
         "LokSanket आवर्ती स्थानीय समस्याओं और विकास प्राथमिकताओं की पहचान करने के लिए अन्य नागरिक इनपुट के साथ इसका विश्लेषण करेगा।",
       refIdLabel: "संदर्भ संख्या:",
       categoryLabel: "पहचानी गई श्रेणी:",
+      subcategoryLabel: "उप-श्रेणी:",
+      severityLabel: "गंभीरता स्तर:",
+      affectedGroupsLabel: "प्रभावित जनसमूह:",
       viewInsightsBtn: "विकास अंतर्दृष्टि में देखें",
       reportAnotherBtn: "एक और समस्या दर्ज करें",
     },

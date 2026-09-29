@@ -18,7 +18,13 @@ export default function ReportIssuePage() {
   const [submittedData, setSubmittedData] = useState<{
     referenceId: string;
     category: string;
+    subcategory?: string;
+    severity?: string;
     summary: string;
+    location?: string;
+    language?: string;
+    affectedGroups?: string[];
+    keywords?: string[];
   } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,7 +57,13 @@ export default function ReportIssuePage() {
       setSubmittedData({
         referenceId: data.complaint?._id || "REF-" + Math.floor(Math.random() * 90000 + 10000),
         category: data.complaint?.category || "Civic Grievance",
+        subcategory: data.complaint?.subcategory,
+        severity: data.complaint?.severity,
         summary: data.complaint?.summary || complaintText.slice(0, 100),
+        location: data.complaint?.location,
+        language: data.complaint?.language,
+        affectedGroups: data.complaint?.affectedGroups,
+        keywords: data.complaint?.keywords,
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -260,20 +272,63 @@ export default function ReportIssuePage() {
               </p>
             </div>
 
-            <div className="bg-slate-50 rounded-lg p-4 max-w-md mx-auto border border-slate-200 text-xs text-left space-y-2">
+            <div className="bg-slate-50 rounded-xl p-5 max-w-lg mx-auto border border-slate-200 text-xs text-left space-y-3">
               <div className="flex items-center justify-between text-slate-500">
                 <span>{t.report.refIdLabel}</span>
-                <span className="font-mono font-bold text-slate-800">
+                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
                   {submittedData.referenceId}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-slate-500">
+
+              <div className="flex items-center justify-between text-slate-600">
                 <span>{t.report.categoryLabel}</span>
-                <span className="font-semibold text-slate-800">
+                <span className="font-semibold text-slate-900">
                   {submittedData.category}
                 </span>
               </div>
-              <div className="pt-2 border-t border-slate-200/80 text-slate-600 italic">
+
+              {submittedData.subcategory && (
+                <div className="flex items-center justify-between text-slate-600">
+                  <span>{t.report.subcategoryLabel}</span>
+                  <span className="font-medium text-slate-800">
+                    {submittedData.subcategory}
+                  </span>
+                </div>
+              )}
+
+              {submittedData.severity && (
+                <div className="flex items-center justify-between text-slate-600">
+                  <span>{t.report.severityLabel}</span>
+                  <span
+                    className={`font-bold uppercase px-2 py-0.5 rounded text-[11px] border ${
+                      submittedData.severity === "critical"
+                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                        : submittedData.severity === "high"
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : submittedData.severity === "medium"
+                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                        : "bg-slate-100 text-slate-700 border-slate-200"
+                    }`}
+                  >
+                    {submittedData.severity}
+                  </span>
+                </div>
+              )}
+
+              {submittedData.affectedGroups && submittedData.affectedGroups.length > 0 && (
+                <div className="flex items-start justify-between gap-2 text-slate-600">
+                  <span className="shrink-0">{t.report.affectedGroupsLabel}</span>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {submittedData.affectedGroups.map((group) => (
+                      <span key={group} className="px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 text-[10px]">
+                        {group}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2.5 border-t border-slate-200/80 text-slate-700 leading-relaxed italic bg-white p-3 rounded-lg border border-slate-200/60">
                 &ldquo;{submittedData.summary}&rdquo;
               </div>
             </div>

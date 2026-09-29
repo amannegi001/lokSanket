@@ -7,74 +7,96 @@ export async function GET() {
   try {
     await connectDB();
 
-    // 1. Calculate high-level KPIs from actual MongoDB data
-    const totalReports = await Complaint.countDocuments();
-    const totalClusters = await IssueCluster.countDocuments();
-    const highPriorityCount = await IssueCluster.countDocuments({
-      priorityLevel: "High",
-    });
-    const mediumPriorityCount = await IssueCluster.countDocuments({
-      priorityLevel: "Medium",
-    });
-    const lowPriorityCount = await IssueCluster.countDocuments({
-      priorityLevel: "Low",
-    });
+    // 1. Fetch high-level KPIs and cluster summary from actual MongoDB records
+    const [
+      totalReports,
+      clusters,
+      distinctLocalities,
+      reportsThisMonth,
+      categoryAgg,
+      timelineAgg,
+    ] = await Promise.all([
+      // A. Total complaint documents
+      Complaint.countDocuments(),
 
-    const distinctLocalities = await Complaint.distinct("location");
-    const affectedLocalitiesCount = distinctLocalities.filter(Boolean).length;
+      // B. All IssueClusters sorted deterministically by priorityScore DESC, reportCount DESC
+      IssueCluster.find()
+        .sort({ priorityScore: -1, reportCount: -1 })
+        .lean(),
 
-    // Reports in last 30 days
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const reportsThisMonth = await Complaint.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo },
-    });
+      // C. Distinct affected localities
+      Complaint.distinct("location"),
 
-    // 2. Aggregate category distribution from complaints
-    const categoryAgg = await Complaint.aggregate([
-      {
-        $group: {
-          _id: "$category",
-          count: { $sum: 1 },
+      // D. Reports in active month cycle (last 30 days)
+      Complaint.countDocuments({
+        createdAt: {
+          $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         },
-      },
-      { $sort: { count: -1 } },
+      }),
+
+      // E. Category distribution directly from complaints
+      Complaint.aggregate([
+        {
+          $group: {
+            _id: "$category",
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+
+      // F. Trend timeline (daily counts across the last 28 days)
+      Complaint.aggregate([
+        {
+          $match: {
+            createdAt: {
+              $gte: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+            },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
     ]);
 
+    // Priority level counts derived directly from stored clusters
+    const highPriorityCount = clusters.filter(
+      (c) => c.priorityLevel === "High"
+    ).length;
+    const mediumPriorityCount = clusters.filter(
+      (c) => c.priorityLevel === "Medium"
+    ).length;
+    const lowPriorityCount = clusters.filter(
+      (c) => c.priorityLevel === "Low"
+    ).length;
+
+    const affectedLocalitiesCount = distinctLocalities.filter(Boolean).length;
+
+    // Format category distribution
     const categoryDistribution = categoryAgg.map((item) => ({
       category: item._id || "Uncategorized",
       count: item.count,
     }));
 
-    // 3. Aggregate trend timeline (daily counts across last 28 days)
-    const timelineAgg = await Complaint.aggregate([
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-          },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
-
+    // Format trend timeline
     const trendTimeline = timelineAgg.map((item) => ({
       date: item._id,
       count: item.count,
     }));
-
-    // 4. Fetch Top Priority Clusters sorted by deterministic priority score
-    const topClusters = await IssueCluster.find()
-      .sort({ priorityScore: -1, reportCount: -1 })
-      .limit(10)
-      .lean();
 
     return NextResponse.json({
       success: true,
       data: {
         kpis: {
           totalReports,
-          totalClusters,
+          totalClusters: clusters.length,
           highPriorityCount,
           mediumPriorityCount,
           lowPriorityCount,
@@ -83,13 +105,14 @@ export async function GET() {
         },
         categoryDistribution,
         trendTimeline,
-        topClusters,
+        topClusters: clusters.slice(0, 10),
+        clusters, // Full set of sorted clusters for instant frontend filtering
         datasetInfo: {
           isSynthetic: true,
           label: "Realistic Demonstration Data",
-          constituency: "Demo Constituency #17",
+          constituency: "Central Demonstration Constituency (Ward 1–25)",
           disclaimer:
-            "AI-generated insights are decision-support recommendations and should be verified against available evidence before action.",
+            "Civic intelligence generated from realistic demonstration complaint records for development decision support.",
         },
       },
     });
@@ -98,7 +121,7 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to generate dashboard intelligence summary.",
+        error: "Failed to generate dashboard intelligence summary from database.",
       },
       { status: 500 }
     );
