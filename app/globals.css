@@ -34,6 +34,10 @@
   --status-success-border: #bbf7d0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
@@ -59,4 +63,3 @@ nextjs-portal,
 div[data-nextjs-toast-wrapper] {
   display: none !important;
 }
-

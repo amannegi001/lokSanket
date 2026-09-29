@@ -56,7 +56,7 @@ export default function LandingPage() {
           SECTION 1: HERO (CENTERED COMPOSITION)
           Generous whitespace, editorial typography, soft layered pastel wave field
           ========================================================================= */}
-      <section className="relative overflow-hidden bg-white border-b border-[#EEF0F5] min-h-[680px] sm:min-h-[740px] flex flex-col justify-center">
+      <section id="home" className="relative overflow-hidden bg-white border-b border-[#EEF0F5] min-h-[680px] sm:min-h-[740px] flex flex-col justify-center">
         {/* Abstract Soft Pastel Lavender/Pink Decorative Flowing Layers (lower 25-30%) */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
           {/* Subtle soft lavender ambient glow */}
@@ -146,7 +146,7 @@ export default function LandingPage() {
           SECTION 2: THE IDEA / HOW IT WORKS (HORIZONTAL INFORMATION FLOW)
           Background: Very subtle #F7F8FC
           ========================================================================= */}
-      <section id="how-it-works" className="py-24 sm:py-32 bg-[#F7F8FC] border-b border-[#EEF0F5]">
+      <section id="how-it-works" className="scroll-mt-20 py-24 sm:py-32 bg-[#F7F8FC] border-b border-[#EEF0F5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
           {/* Section Header */}
           <div className="max-w-3xl space-y-3">
@@ -163,17 +163,23 @@ export default function LandingPage() {
 
           {/* Horizontal Linear Process Flow (Connected Timeline on Desktop, Stacked on Mobile) */}
           <div className="relative">
-            {/* Desktop Connecting Rail */}
-            <div className="hidden lg:block absolute top-10 left-6 right-6 h-0.5 bg-[#E6E8EF] z-0" aria-hidden="true" />
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8 lg:gap-6 relative z-10">
               {t.pipeline.steps.map((step, idx) => {
                 const Icon = stepIcons[idx] || FileText;
                 return (
                   <div key={step.num} className="space-y-4">
                     {/* Number Badge & Icon Node */}
-                    <div className="flex items-center gap-3 lg:flex-col lg:items-start">
-                      <div className="w-12 h-12 rounded-full bg-white border-2 border-indigo-600 flex items-center justify-center text-indigo-700 font-mono text-sm font-black shadow-xs shrink-0">
+                    <div className="relative w-full flex items-center gap-3 lg:flex-col lg:items-start">
+                      {/* Desktop Horizontal Connector Rail (centered with numbered circles) */}
+                      {idx < t.pipeline.steps.length - 1 && (
+                        <div
+                          className="hidden lg:block absolute top-6 -translate-y-1/2 left-6 h-0.5 bg-[#E6E8EF] z-0 pointer-events-none"
+                          style={{ width: "calc(100% + 1.5rem)" }}
+                          aria-hidden="true"
+                        />
+                      )}
+
+                      <div className="relative z-10 w-12 h-12 rounded-full bg-white border-2 border-indigo-600 flex items-center justify-center text-indigo-700 font-mono text-sm font-black shadow-xs shrink-0">
                         {step.num}
                       </div>
                       <div className="flex items-center gap-2">
@@ -483,7 +489,7 @@ export default function LandingPage() {
           SECTION 6: FINAL CTA (CALM, EDITORIAL, CENTERED)
           Background: Very subtle pale lavender tint (#FAF8FF)
           ========================================================================= */}
-      <section id="about" className="pt-10 sm:pt-12 pb-20 sm:pb-24 bg-[#FAF8FF] border-b border-[#EEF0F5]">
+      <section id="about" className="scroll-mt-20 pt-10 sm:pt-12 pb-20 sm:pb-24 bg-[#FAF8FF] border-b border-[#EEF0F5]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-8">
           <div className="space-y-4">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">

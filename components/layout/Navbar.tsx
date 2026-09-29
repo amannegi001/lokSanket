@@ -2,23 +2,129 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X, ArrowUpRight } from "lucide-react";
-
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("home");
   const { language, setLanguage, t } = useLanguage();
 
   const navLinks = [
-    { name: t.nav.home, href: "/" },
-    { name: t.nav.howItWorks, href: "/#how-it-works" },
-    { name: t.nav.insights, href: "/dashboard" },
-    { name: t.nav.about, href: "/#about" },
+    { id: "home", name: t.nav.home, href: "/" },
+    { id: "how-it-works", name: t.nav.howItWorks, href: "/#how-it-works" },
+    { id: "insights", name: t.nav.insights, href: "/dashboard" },
+    { id: "about", name: t.nav.about, href: "/#about" },
   ];
+
+  // Dynamically track active section on scroll or hash change when on the homepage
+  useEffect(() => {
+    if (pathname !== "/") return;
+
+    const computeActiveSection = () => {
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+
+      // 1. If at or near the bottom of the page, activate "about"
+      if (scrollY + windowHeight >= documentHeight - 120) {
+        setActiveSection("about");
+        return;
+      }
+
+      // 2. Check "about" section position
+      const aboutEl = document.getElementById("about");
+      if (aboutEl) {
+        const rect = aboutEl.getBoundingClientRect();
+        if (rect.top <= windowHeight * 0.5) {
+          setActiveSection("about");
+          return;
+        }
+      }
+
+      // 3. Check "how-it-works" section position
+      const howItWorksEl = document.getElementById("how-it-works");
+      if (howItWorksEl) {
+        const rect = howItWorksEl.getBoundingClientRect();
+        if (rect.top <= 200) {
+          setActiveSection("how-it-works");
+          return;
+        }
+      }
+
+      // 4. Default to "home" when near top
+      setActiveSection("home");
+    };
+
+    // Check initial hash or scroll position asynchronously on mount
+    const initialRafId = window.requestAnimationFrame(() => {
+      if (window.location.hash === "#about") {
+        setActiveSection("about");
+      } else if (window.location.hash === "#how-it-works") {
+        setActiveSection("how-it-works");
+      } else {
+        computeActiveSection();
+      }
+    });
+
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          computeActiveSection();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    const onHashChange = () => {
+      if (window.location.hash === "#about") {
+        setActiveSection("about");
+      } else if (window.location.hash === "#how-it-works") {
+        setActiveSection("how-it-works");
+      } else if (window.location.hash === "#home" || !window.location.hash) {
+        setActiveSection("home");
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("hashchange", onHashChange);
+
+    return () => {
+      window.cancelAnimationFrame(initialRafId);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("hashchange", onHashChange);
+    };
+  }, [pathname]);
+
+  const handleNavClick = (id: string, href: string) => {
+    setActiveSection(id);
+    setMobileMenuOpen(false);
+
+    if (pathname === "/" && href.startsWith("/#")) {
+      const targetId = href.replace("/#", "");
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (pathname === "/" && href === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const getIsActive = (id: string) => {
+    if (pathname?.startsWith("/dashboard")) {
+      return id === "insights";
+    }
+    if (pathname === "/") {
+      return activeSection === id;
+    }
+    return false;
+  };
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -44,7 +150,11 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
         {/* Left Logo */}
         <div className="flex items-center">
-          <Link href="/" className="flex items-center group">
+          <Link
+            href="/"
+            onClick={() => handleNavClick("home", "/")}
+            className="flex items-center group"
+          >
             <Image
               src="/logo.svg"
               alt="LokSanket — Civic Development Intelligence"
@@ -57,22 +167,21 @@ export default function Navbar() {
         </div>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-6" aria-label="Main Navigation">
           {navLinks.map((link) => {
-            const isActive =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname?.startsWith(link.href) && link.href !== "/#how-it-works" && link.href !== "/#about";
+            const isActive = getIsActive(link.id);
 
             return (
               <Link
-                key={link.name}
+                key={link.id}
                 href={link.href}
-                className={`text-sm font-medium transition-colors ${
+                onClick={() => handleNavClick(link.id, link.href)}
+                className={`text-sm font-medium transition-colors duration-150 ${
                   isActive
-                    ? "text-indigo-700 font-semibold"
+                    ? "text-indigo-700 font-bold"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
+                aria-current={isActive ? "page" : undefined}
               >
                 {link.name}
               </Link>
@@ -138,6 +247,8 @@ export default function Navbar() {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-1.5 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            aria-label="Toggle mobile menu"
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -147,16 +258,25 @@ export default function Navbar() {
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-3">
-          {navLinks.map((link) => (
-            <Link
-              key={link.name}
-              href={link.href}
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-1.5 text-sm font-medium text-slate-700 hover:text-indigo-700"
-            >
-              {link.name}
-            </Link>
-          ))}
+          {navLinks.map((link) => {
+            const isActive = getIsActive(link.id);
+
+            return (
+              <Link
+                key={link.id}
+                href={link.href}
+                onClick={() => handleNavClick(link.id, link.href)}
+                className={`block py-1.5 text-sm transition-colors duration-150 ${
+                  isActive
+                    ? "text-indigo-700 font-bold"
+                    : "text-slate-700 hover:text-indigo-700 font-medium"
+                }`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
           <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
             <span className="text-xs text-slate-500">{t.nav.languageLabel}</span>
             <div className="flex items-center gap-1.5 text-xs">
