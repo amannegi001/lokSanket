@@ -11,16 +11,25 @@ import {
   Camera,
   MapPin,
   AlertCircle,
+  X,
 } from "lucide-react";
-import { validatePhotoFile } from "@/lib/photo-validation";
+import {
+  validatePhotoFile,
+  MAX_PHOTOS_PER_COMPLAINT,
+} from "@/lib/photo-validation";
+
+interface PhotoItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+}
 
 export default function ReportIssuePage() {
   const { t } = useLanguage();
   const [complaintText, setComplaintText] = useState("");
   const [location, setLocation] = useState("");
   const [language, setLanguage] = useState("auto");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedPhotos, setSelectedPhotos] = useState<PhotoItem[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,43 +44,67 @@ export default function ReportIssuePage() {
     location?: string;
     language?: string;
     imageUrl?: string;
+    imageUrls?: string[];
     affectedGroups?: string[];
     keywords?: string[];
   } | null>(null);
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+      for (const p of selectedPhotos) {
+        if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
       }
     };
-  }, [previewUrl]);
+  }, [selectedPhotos]);
 
-  const handleFileChange = (file: File | null) => {
+  const handleAddPhotos = (incomingFiles: FileList | File[]) => {
     setFileError(null);
-    if (!file) return;
+    const newFiles = Array.from(incomingFiles);
+    if (newFiles.length === 0) return;
 
-    const validation = validatePhotoFile(file);
-    if (!validation.valid) {
-      setFileError(validation.error || "Invalid file format or size.");
+    if (selectedPhotos.length + newFiles.length > MAX_PHOTOS_PER_COMPLAINT) {
+      setFileError(
+        `You can upload a maximum of ${MAX_PHOTOS_PER_COMPLAINT} photos per complaint. You have ${selectedPhotos.length} and attempted to add ${newFiles.length}.`
+      );
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
+    for (const f of newFiles) {
+      const val = validatePhotoFile(f);
+      if (!val.valid) {
+        setFileError(`${f.name}: ${val.error}`);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
     }
 
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    const newItems: PhotoItem[] = newFiles.map((f) => ({
+      id: `${f.name}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      file: f,
+      previewUrl: URL.createObjectURL(f),
+    }));
+
+    setSelectedPhotos((prev) => [...prev, ...newItems]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleRemoveFile = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
+  const handleRemovePhoto = (id: string) => {
+    setSelectedPhotos((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((p) => p.id !== id);
+    });
+    setFileError(null);
+  };
+
+  const handleClearAllPhotos = () => {
+    for (const p of selectedPhotos) {
+      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
     }
-    setSelectedFile(null);
-    setPreviewUrl(null);
+    setSelectedPhotos([]);
     setFileError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -82,7 +115,7 @@ export default function ReportIssuePage() {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileChange(e.dataTransfer.files[0]);
+      handleAddPhotos(e.dataTransfer.files);
     }
   };
 
@@ -96,12 +129,14 @@ export default function ReportIssuePage() {
     try {
       let response: Response;
 
-      if (selectedFile) {
+      if (selectedPhotos.length > 0) {
         const formData = new FormData();
         formData.append("rawText", complaintText);
         if (location.trim()) formData.append("location", location.trim());
         if (language !== "auto") formData.append("language", language);
-        formData.append("photo", selectedFile);
+        for (const item of selectedPhotos) {
+          formData.append("photos", item.file);
+        }
 
         response = await fetch("/api/complaints", {
           method: "POST",
@@ -136,6 +171,7 @@ export default function ReportIssuePage() {
         location: data.complaint?.location,
         language: data.complaint?.language,
         imageUrl: data.complaint?.imageUrl,
+        imageUrls: data.complaint?.imageUrls || (data.complaint?.imageUrl ? [data.complaint.imageUrl] : []),
         affectedGroups: data.complaint?.affectedGroups,
         keywords: data.complaint?.keywords,
       });
@@ -280,13 +316,21 @@ export default function ReportIssuePage() {
               </div>
 
               {/* Field 4: Optional Photo / Evidence */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1">
-                  <Camera className="w-3.5 h-3.5 text-slate-400" />
-                  {t.report.photoLabel}
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1">
+                    <Camera className="w-3.5 h-3.5 text-slate-400" />
+                    {t.report.photoLabel}
+                  </label>
+                  {selectedPhotos.length > 0 && (
+                    <span className="text-[11px] font-medium text-slate-500">
+                      {selectedPhotos.length} / {MAX_PHOTOS_PER_COMPLAINT} photos
+                    </span>
+                  )}
+                </div>
 
-                {!selectedFile ? (
+                {/* Dropzone - shown when room to add more photos */}
+                {selectedPhotos.length < MAX_PHOTOS_PER_COMPLAINT && (
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={(e) => {
@@ -295,7 +339,9 @@ export default function ReportIssuePage() {
                     }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
+                    className={`border-2 border-dashed rounded-lg cursor-pointer transition-all ${
+                      selectedPhotos.length === 0 ? "p-5" : "p-3"
+                    } flex flex-col items-center justify-center gap-1.5 ${
                       isDragging
                         ? "border-indigo-500 bg-indigo-50/50"
                         : "border-slate-300 hover:border-indigo-400 bg-slate-50/50 hover:bg-slate-50"
@@ -304,82 +350,71 @@ export default function ReportIssuePage() {
                     <input
                       ref={fileInputRef}
                       type="file"
+                      multiple
                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                       onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleFileChange(e.target.files[0]);
+                        if (e.target.files && e.target.files.length > 0) {
+                          handleAddPhotos(e.target.files);
                         }
                       }}
                       className="hidden"
                       id="photo-file-input"
                     />
-                    <div className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-indigo-600">
-                      <Camera className="w-5 h-5" />
-                    </div>
-                    <div className="text-center space-y-0.5">
-                      <span className="text-xs font-semibold text-indigo-700 hover:text-indigo-800">
-                        {t.report.photoUploadBtn}
+                    <div className="flex items-center gap-2 text-indigo-700">
+                      <Camera className="w-4 h-4 shrink-0" />
+                      <span className="text-xs font-semibold hover:text-indigo-800">
+                        {selectedPhotos.length === 0
+                          ? t.report.photoUploadBtn
+                          : t.report.photoAddMoreBtn}
                       </span>
-                      <p className="text-[11px] text-slate-500">
+                    </div>
+                    {selectedPhotos.length === 0 && (
+                      <p className="text-[11px] text-slate-500 text-center">
                         {t.report.photoFormatHint}
                       </p>
-                    </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-white shadow-2xs gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {previewUrl ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={previewUrl}
-                          alt="Evidence preview"
-                          className="w-14 h-14 rounded-md object-cover border border-slate-200 shrink-0"
-                        />
-                      ) : (
-                        <div className="w-14 h-14 rounded-md bg-slate-100 flex items-center justify-center shrink-0">
-                          <Camera className="w-6 h-6 text-slate-400" />
+                )}
+
+                {/* Selected Photos Gallery Grid */}
+                {selectedPhotos.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {selectedPhotos.map((item, idx) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-white shadow-2xs gap-2.5"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.previewUrl}
+                            alt={`Evidence photo ${idx + 1}`}
+                            className="w-11 h-11 rounded-md object-cover border border-slate-200 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p
+                              className="text-xs font-semibold text-slate-800 truncate"
+                              title={item.file.name}
+                            >
+                              {item.file.name}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {(item.file.size / (1024 * 1024)).toFixed(2)} MB
+                            </p>
+                          </div>
                         </div>
-                      )}
-                      <div className="min-w-0">
-                        <p
-                          className="text-xs font-semibold text-slate-800 truncate"
-                          title={selectedFile.name}
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(item.id)}
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                          title="Remove photo"
+                          aria-label={`Remove photo ${item.file.name}`}
                         >
-                          {selectedFile.name}
-                        </p>
-                        <p className="text-[11px] text-slate-400">
-                          {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                        </p>
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 rounded border border-indigo-200 transition-colors cursor-pointer"
-                      >
-                        {t.report.photoChangeBtn}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleRemoveFile}
-                        className="px-2.5 py-1 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded border border-rose-200 transition-colors cursor-pointer"
-                      >
-                        {t.report.photoRemoveBtn}
-                      </button>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleFileChange(e.target.files[0]);
-                        }
-                      }}
-                      className="hidden"
-                      id="photo-file-input-change"
-                    />
+                    ))}
                   </div>
                 )}
 
@@ -499,12 +534,20 @@ export default function ReportIssuePage() {
                 </div>
               )}
 
-              {submittedData.imageUrl && (
+              {((submittedData.imageUrls &&
+                submittedData.imageUrls.length > 0) ||
+                submittedData.imageUrl) && (
                 <div className="flex items-center justify-between text-slate-600">
                   <span>{t.report.photoLabel.split("(")[0].trim()}:</span>
                   <span className="text-emerald-700 font-medium flex items-center gap-1 text-xs">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    Attached ({submittedData.imageUrl.split("/").pop()})
+                    Attached (
+                    {submittedData.imageUrls?.length ||
+                      (submittedData.imageUrl ? 1 : 0)}{" "}
+                    {(submittedData.imageUrls?.length || 1) === 1
+                      ? "photo"
+                      : "photos"}
+                    )
                   </span>
                 </div>
               )}
@@ -528,7 +571,7 @@ export default function ReportIssuePage() {
                   setSubmittedData(null);
                   setComplaintText("");
                   setLocation("");
-                  handleRemoveFile();
+                  handleClearAllPhotos();
                   setError(null);
                 }}
                 className="w-full sm:w-auto px-5 py-2.5 rounded-md border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"

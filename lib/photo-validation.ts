@@ -1,4 +1,5 @@
 export const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+export const MAX_PHOTOS_PER_COMPLAINT = 5;
 
 export const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -44,3 +45,29 @@ export function validatePhotoFile(file: {
 
   return { valid: true };
 }
+
+export function validatePhotoFiles(
+  files: Array<{ name: string; size: number; type: string }>,
+  existingCount = 0
+): PhotoValidationResult {
+  const totalCount = existingCount + files.length;
+  if (totalCount > MAX_PHOTOS_PER_COMPLAINT) {
+    return {
+      valid: false,
+      error: `You can upload a maximum of ${MAX_PHOTOS_PER_COMPLAINT} photos per complaint (currently ${totalCount}).`,
+    };
+  }
+
+  for (const file of files) {
+    const res = validatePhotoFile(file);
+    if (!res.valid) {
+      return {
+        valid: false,
+        error: `${file.name}: ${res.error}`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+

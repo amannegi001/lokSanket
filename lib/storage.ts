@@ -3,11 +3,28 @@ import { ObjectId } from "mongodb";
 import { connectDB } from "@/lib/db";
 export {
   MAX_PHOTO_SIZE_BYTES,
+  MAX_PHOTOS_PER_COMPLAINT,
   ALLOWED_MIME_TYPES,
   ALLOWED_EXTENSIONS,
   validatePhotoFile,
+  validatePhotoFiles,
   type PhotoValidationResult,
 } from "@/lib/photo-validation";
+
+export async function storePhotosInGridFS(files: File[]): Promise<
+  Array<{
+    fileId: string;
+    filename: string;
+    url: string;
+  }>
+> {
+  const results = [];
+  for (const file of files) {
+    const stored = await storePhotoInGridFS(file);
+    results.push(stored);
+  }
+  return results;
+}
 
 export async function storePhotoInGridFS(file: File): Promise<{
   fileId: string;

@@ -33,7 +33,7 @@ export async function GET(request: Request, context: RouteContext) {
       _id: { $in: cluster.complaintIds },
     })
       .sort({ createdAt: -1 })
-      .select("rawText language severity location imageUrl createdAt")
+      .select("rawText language severity location imageUrl imageUrls createdAt")
       .lean();
 
     // 2. Derive locality distribution breakdown

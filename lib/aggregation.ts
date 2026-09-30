@@ -144,7 +144,10 @@ export async function aggregateConstituencySummary(
 
     // 7. Photo evidence count
     Complaint.countDocuments({
-      imageUrl: { $exists: true, $nin: [null, ""] },
+      $or: [
+        { imageUrl: { $exists: true, $nin: [null, ""] } },
+        { "imageUrls.0": { $exists: true } },
+      ],
     }),
 
     // 8. Language distribution
@@ -259,7 +262,7 @@ export async function aggregateCategoryWardEvidence(options: {
   ] = await Promise.all([
     Complaint.find(matchFilter)
       .sort({ createdAt: -1 })
-      .select("rawText language location severity imageUrl createdAt")
+      .select("rawText language location severity imageUrl imageUrls createdAt")
       .lean(),
 
     Complaint.countDocuments(matchFilter),
@@ -287,7 +290,10 @@ export async function aggregateCategoryWardEvidence(options: {
 
     Complaint.countDocuments({
       ...matchFilter,
-      imageUrl: { $exists: true, $nin: [null, ""] },
+      $or: [
+        { imageUrl: { $exists: true, $nin: [null, ""] } },
+        { "imageUrls.0": { $exists: true } },
+      ],
     }),
   ]);
 
@@ -343,7 +349,11 @@ export async function aggregateCategoryWardEvidence(options: {
     language: c.language,
     location: c.location,
     severity: c.severity,
-    hasPhoto: Boolean(c.imageUrl && c.imageUrl.trim().length > 0),
+    hasPhoto: Boolean(
+      (c.imageUrl && c.imageUrl.trim().length > 0) ||
+      (Array.isArray(c.imageUrls) &&
+        c.imageUrls.some((u: string) => u && u.trim().length > 0))
+    ),
     createdAt: c.createdAt,
   }));
 

@@ -124,6 +124,7 @@ export interface Translations {
     photoPlaceholder: string;
     photoHint: string;
     photoUploadBtn: string;
+    photoAddMoreBtn: string;
     photoFormatHint: string;
     photoChangeBtn: string;
     photoRemoveBtn: string;
@@ -337,8 +338,9 @@ export const translations: Record<Language, Translations> = {
       photoLabel: "Photo / Evidence (Optional)",
       photoPlaceholder: "https://example.com/photo.jpg",
       photoHint: "Photographs help verify ground reality and strengthen the evidence trail.",
-      photoUploadBtn: "Upload a photo",
-      photoFormatHint: "JPG, PNG or WEBP · Max 5 MB",
+      photoUploadBtn: "Upload photos",
+      photoAddMoreBtn: "+ Add more photos",
+      photoFormatHint: "Up to 5 photos · JPG, PNG or WEBP · Max 5 MB each",
       photoChangeBtn: "Change",
       photoRemoveBtn: "Remove",
       submitBtn: "Submit Report",
@@ -550,8 +552,9 @@ export const translations: Record<Language, Translations> = {
       photoLabel: "फोटो / साक्ष्य (वैकल्पिक)",
       photoPlaceholder: "https://example.com/photo.jpg",
       photoHint: "तस्वीरें जमीनी हकीकत को सत्यापित करने और साक्ष्य श्रृंखला को मजबूत करने में मदद करती हैं।",
-      photoUploadBtn: "फोटो अपलोड करें",
-      photoFormatHint: "JPG, PNG या WEBP · अधिकतम 5 MB",
+      photoUploadBtn: "तस्वीरें अपलोड करें",
+      photoAddMoreBtn: "+ और तस्वीरें जोड़ें",
+      photoFormatHint: "अधिकतम 5 तस्वीरें · JPG, PNG या WEBP · अधिकतम 5 MB प्रत्येक",
       photoChangeBtn: "बदलें",
       photoRemoveBtn: "हटाएं",
       submitBtn: "रिपोर्ट सबमिट करें",

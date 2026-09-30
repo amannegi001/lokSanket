@@ -220,7 +220,12 @@ export function calculateClusterEvidence(
   const affectedGroupsSet = new Set<string>();
 
   for (const c of complaints) {
-    if (c.imageUrl && c.imageUrl.trim().length > 0) {
+    const hasPhoto = Boolean(
+      (c.imageUrl && c.imageUrl.trim().length > 0) ||
+      (Array.isArray(c.imageUrls) &&
+        c.imageUrls.some((u) => u && u.trim().length > 0))
+    );
+    if (hasPhoto) {
       photoEvidenceCount++;
     }
     if (Array.isArray(c.affectedGroups)) {

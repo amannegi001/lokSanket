@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Complaint } from "@/models/Complaint";
 import { extractComplaintWithGemini } from "@/lib/gemini";
-import { validatePhotoFile, storePhotoInGridFS } from "@/lib/storage";
+import {
+  MAX_PHOTOS_PER_COMPLAINT,
+  validatePhotoFiles,
+  storePhotosInGridFS,
+} from "@/lib/storage";
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +15,8 @@ export async function POST(request: Request) {
     let location = "";
     let requestedLanguage = "";
     let imageUrl: string | undefined = undefined;
-    let uploadedFile: File | null = null;
+    let imageUrls: string[] = [];
+    const uploadedFiles: File[] = [];
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
@@ -29,23 +34,36 @@ export async function POST(request: Request) {
         (formData.get("language") as string) ||
         ""
       ).trim();
-      imageUrl = (
+
+      const legacyImageUrl = (
         (formData.get("imageUrl") as string) ||
         ""
-      ).trim() || undefined;
+      ).trim();
+      if (legacyImageUrl) {
+        imageUrls.push(legacyImageUrl);
+      }
 
-      const fileEntry =
-        formData.get("photo") ||
-        formData.get("file") ||
-        formData.get("image");
+      const rawImageUrls = formData.getAll("imageUrls");
+      for (const u of rawImageUrls) {
+        if (typeof u === "string" && u.trim()) {
+          imageUrls.push(u.trim());
+        }
+      }
 
-      if (
-        fileEntry &&
-        typeof fileEntry === "object" &&
-        "size" in fileEntry &&
-        (fileEntry as File).size > 0
-      ) {
-        uploadedFile = fileEntry as File;
+      // Collect all photo files from common multipart keys
+      const fileKeys = ["photos", "photo", "files", "file", "images", "image"];
+      for (const key of fileKeys) {
+        const entries = formData.getAll(key);
+        for (const entry of entries) {
+          if (
+            entry &&
+            typeof entry === "object" &&
+            "size" in entry &&
+            (entry as File).size > 0
+          ) {
+            uploadedFiles.push(entry as File);
+          }
+        }
       }
     } else {
       const body = await request.json().catch(() => null);
@@ -63,28 +81,51 @@ export async function POST(request: Request) {
       rawText = (body.rawText || body.text || "").trim();
       location = (body.location || body.locality || "").trim();
       requestedLanguage = (body.language || "").trim();
-      imageUrl = (body.imageUrl || "").trim() || undefined;
+
+      if (Array.isArray(body.imageUrls)) {
+        imageUrls = body.imageUrls.filter(
+          (u: unknown) => typeof u === "string" && (u as string).trim()
+        );
+      } else if (
+        body.imageUrl &&
+        typeof body.imageUrl === "string" &&
+        body.imageUrl.trim()
+      ) {
+        imageUrls = [body.imageUrl.trim()];
+      }
     }
 
-    // Process photo file if uploaded
-    if (uploadedFile) {
-      const validation = validatePhotoFile(uploadedFile);
+    // Validate uploaded photo count
+    if (uploadedFiles.length > MAX_PHOTOS_PER_COMPLAINT) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `You can upload a maximum of ${MAX_PHOTOS_PER_COMPLAINT} photos per complaint (attempted ${uploadedFiles.length}).`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Process photo files if uploaded
+    if (uploadedFiles.length > 0) {
+      const validation = validatePhotoFiles(uploadedFiles);
       if (!validation.valid) {
         return NextResponse.json(
           {
             success: false,
-            error: validation.error || "Invalid photo file.",
+            error: validation.error || "Invalid photo files.",
           },
           { status: 400 }
         );
       }
 
       try {
-        const stored = await storePhotoInGridFS(uploadedFile);
-        imageUrl = stored.url;
+        const storedPhotos = await storePhotosInGridFS(uploadedFiles);
+        const newUrls = storedPhotos.map((p) => p.url);
+        imageUrls = [...imageUrls, ...newUrls];
       } catch (storageError: unknown) {
         console.error(
-          "[POST /api/complaints] Failed to store photo in GridFS:",
+          "[POST /api/complaints] Failed to store photos in GridFS:",
           storageError
         );
         return NextResponse.json(
@@ -96,6 +137,9 @@ export async function POST(request: Request) {
         );
       }
     }
+
+    // Maintain backwards compatibility: set primary imageUrl to first photo
+    imageUrl = imageUrls.length > 0 ? imageUrls[0] : undefined;
 
     if (!rawText) {
       return NextResponse.json(
@@ -163,6 +207,7 @@ export async function POST(request: Request) {
         keywords: extracted.keywords,
         location: location || undefined,
         imageUrl: imageUrl,
+        imageUrls: imageUrls,
         status: "new",
         createdAt: new Date(),
       });

@@ -12,6 +12,7 @@ export interface IComplaint extends Document {
   keywords: string[];
   location?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   clusterId?: mongoose.Types.ObjectId | string | null;
   createdAt: Date;
   status: "new" | "clustered" | "prioritized" | "reviewed" | "resolved";
@@ -72,6 +73,10 @@ const ComplaintSchema = new Schema<IComplaint>(
     imageUrl: {
       type: String,
       trim: true,
+    },
+    imageUrls: {
+      type: [String],
+      default: [],
     },
     clusterId: {
       type: Schema.Types.Mixed,

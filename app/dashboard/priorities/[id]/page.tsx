@@ -95,6 +95,7 @@ interface SampleComplaint {
   language: string;
   severity: string;
   imageUrl?: string;
+  imageUrls?: string[];
   createdAt: string;
 }
 
@@ -758,14 +759,57 @@ export default function PriorityDetailPage() {
 
                   <p className="text-slate-800 italic leading-relaxed">&ldquo;{c.rawText}&rdquo;</p>
 
-                  {c.imageUrl && (
-                    <div className="pt-0.5">
-                      <span className="inline-flex items-center gap-1 text-[11px] text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                        <Camera className="w-3 h-3 text-indigo-600" />
-                        <span>Photo evidence on file: {c.imageUrl.split("/").pop()}</span>
-                      </span>
-                    </div>
-                  )}
+                  {(() => {
+                    const photos =
+                      Array.isArray(c.imageUrls) && c.imageUrls.length > 0
+                        ? c.imageUrls
+                        : c.imageUrl
+                        ? [c.imageUrl]
+                        : [];
+
+                    if (photos.length === 0) return null;
+
+                    return (
+                      <div className="pt-1.5 space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-indigo-700">
+                          <Camera className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                          <span>
+                            {photos.length === 1
+                              ? `Photo evidence on file: ${photos[0].split("/").pop()}`
+                              : `${photos.length} photos on file`}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 pt-0.5">
+                          {photos.map((photoUrl, pIdx) => {
+                            const fileName =
+                              photoUrl.split("/").pop() || `Photo ${pIdx + 1}`;
+                            return (
+                              <a
+                                key={pIdx}
+                                href={photoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group inline-flex items-center gap-1.5 p-1 pr-2 rounded-md border border-slate-200 bg-slate-50 hover:bg-white hover:border-indigo-300 transition-colors shadow-2xs"
+                                title={`Open ${fileName}`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={photoUrl}
+                                  alt={fileName}
+                                  className="w-8 h-8 object-cover rounded border border-slate-200"
+                                  loading="lazy"
+                                />
+                                <span className="text-[10px] text-slate-700 font-medium max-w-[100px] sm:max-w-[140px] truncate">
+                                  {fileName}
+                                </span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

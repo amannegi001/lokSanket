@@ -374,7 +374,12 @@ export function calculateClusterPriority(
       previousCount++;
     }
 
-    if (c.imageUrl && c.imageUrl.trim().length > 0) {
+    const hasPhoto = Boolean(
+      (c.imageUrl && c.imageUrl.trim().length > 0) ||
+      (Array.isArray(c.imageUrls) &&
+        c.imageUrls.some((u) => u && u.trim().length > 0))
+    );
+    if (hasPhoto) {
       photoEvidenceCount++;
     }
 
