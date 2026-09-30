@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
 import { recalculateAndPersistPriorities } from "@/lib/priority";
+import { isOfficialAuthenticatedRequest } from "@/lib/auth";
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    if (!isOfficialAuthenticatedRequest(request)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized: Official demo access required to recalculate priorities.",
+        },
+        { status: 401 }
+      );
+    }
+
     const result = await recalculateAndPersistPriorities();
 
     if (!result.success) {

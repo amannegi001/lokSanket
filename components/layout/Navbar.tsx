@@ -1,24 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, ArrowUpRight } from "lucide-react";
+import { Menu, X, ArrowUpRight, ShieldCheck, LogOut } from "lucide-react";
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("home");
   const { language, setLanguage, t } = useLanguage();
 
-  const navLinks = [
+  const isOfficialWorkspace =
+    pathname?.startsWith("/official") && pathname !== "/official/access";
+
+  const publicNavLinks = [
     { id: "home", name: t.nav.home, href: "/" },
     { id: "how-it-works", name: t.nav.howItWorks, href: "/#how-it-works" },
     { id: "insights", name: t.nav.insights, href: "/dashboard" },
     { id: "about", name: t.nav.about, href: "/#about" },
   ];
+
+  const officialNavLinks = [
+    { id: "official-dash", name: "Dashboard", href: "/official" },
+    { id: "official-briefs", name: "Development Brief", href: "/official/briefs" },
+  ];
+
+  const currentNavLinks = isOfficialWorkspace ? officialNavLinks : publicNavLinks;
 
   // Dynamically track active section on scroll or hash change when on the homepage
   useEffect(() => {
@@ -29,13 +40,11 @@ export default function Navbar() {
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
 
-      // 1. If at or near the bottom of the page, activate "about"
       if (scrollY + windowHeight >= documentHeight - 120) {
         setActiveSection("about");
         return;
       }
 
-      // 2. Check "about" section position
       const aboutEl = document.getElementById("about");
       if (aboutEl) {
         const rect = aboutEl.getBoundingClientRect();
@@ -45,7 +54,6 @@ export default function Navbar() {
         }
       }
 
-      // 3. Check "how-it-works" section position
       const howItWorksEl = document.getElementById("how-it-works");
       if (howItWorksEl) {
         const rect = howItWorksEl.getBoundingClientRect();
@@ -55,11 +63,9 @@ export default function Navbar() {
         }
       }
 
-      // 4. Default to "home" when near top
       setActiveSection("home");
     };
 
-    // Check initial hash or scroll position asynchronously on mount
     const initialRafId = window.requestAnimationFrame(() => {
       if (window.location.hash === "#about") {
         setActiveSection("about");
@@ -116,7 +122,22 @@ export default function Navbar() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/official/logout", { method: "POST" });
+      router.push("/");
+      router.refresh();
+    } catch {
+      router.push("/");
+    }
+  };
+
   const getIsActive = (id: string) => {
+    if (isOfficialWorkspace) {
+      if (id === "official-dash" && pathname === "/official") return true;
+      if (id === "official-briefs" && pathname?.startsWith("/official/briefs")) return true;
+      return false;
+    }
     if (pathname?.startsWith("/dashboard")) {
       return id === "insights";
     }
@@ -149,10 +170,10 @@ export default function Navbar() {
       {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
         {/* Left Logo */}
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
           <Link
-            href="/"
-            onClick={() => handleNavClick("home", "/")}
+            href={isOfficialWorkspace ? "/official" : "/"}
+            onClick={() => handleNavClick("home", isOfficialWorkspace ? "/official" : "/")}
             className="flex items-center group"
           >
             <Image
@@ -164,11 +185,17 @@ export default function Navbar() {
               priority
             />
           </Link>
+
+          {isOfficialWorkspace && (
+            <span className="hidden sm:inline-block text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+              Official Review Mode
+            </span>
+          )}
         </div>
 
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-6" aria-label="Main Navigation">
-          {navLinks.map((link) => {
+          {currentNavLinks.map((link) => {
             const isActive = getIsActive(link.id);
 
             return (
@@ -190,7 +217,7 @@ export default function Navbar() {
         </nav>
 
         {/* Right Action Items */}
-        <div className="hidden sm:flex items-center gap-4">
+        <div className="hidden sm:flex items-center gap-3">
           {/* Language Toggle */}
           <div
             role="group"
@@ -226,24 +253,51 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* Primary CTA: Report an Issue */}
-          <Link
-            href="/report"
-            className="px-4 py-2 rounded-md bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
-          >
-            <span>{t.nav.reportCta}</span>
-            <ArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
+          {/* Conditional Actions: Official Workspace vs Public Site */}
+          {isOfficialWorkspace ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-2xs"
+              title="Exit official review mode"
+            >
+              <LogOut className="w-3.5 h-3.5 text-slate-500" />
+              <span>Exit Official Mode</span>
+            </button>
+          ) : (
+            <>
+              {/* Public link to Official Access */}
+              <Link
+                href="/official/access"
+                className="px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs"
+                title="Access official review workspace (Demo)"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-700" />
+                <span>Official Review (Demo)</span>
+              </Link>
+
+              {/* Citizen CTA: Report an Issue */}
+              <Link
+                href="/report"
+                className="px-4 py-2 rounded-md bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
+              >
+                <span>{t.nav.reportCta}</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
         <div className="flex items-center sm:hidden gap-2">
-          <Link
-            href="/report"
-            className="px-3 py-1.5 rounded-md bg-indigo-700 text-white text-xs font-semibold"
-          >
-            {t.nav.reportShort}
-          </Link>
+          {!isOfficialWorkspace && (
+            <Link
+              href="/report"
+              className="px-3 py-1.5 rounded-md bg-indigo-700 text-white text-xs font-semibold"
+            >
+              {t.nav.reportShort}
+            </Link>
+          )}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-1.5 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -258,7 +312,7 @@ export default function Navbar() {
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-3">
-          {navLinks.map((link) => {
+          {currentNavLinks.map((link) => {
             const isActive = getIsActive(link.id);
 
             return (
@@ -277,6 +331,32 @@ export default function Navbar() {
               </Link>
             );
           })}
+
+          {!isOfficialWorkspace && (
+            <Link
+              href="/official/access"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-1.5 text-sm font-semibold text-indigo-700 flex items-center gap-1.5"
+            >
+              <ShieldCheck className="w-4 h-4 text-indigo-700" />
+              <span>Official Review (Demo)</span>
+            </Link>
+          )}
+
+          {isOfficialWorkspace && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleLogout();
+              }}
+              className="w-full text-left py-1.5 text-sm font-semibold text-rose-700 flex items-center gap-1.5"
+            >
+              <LogOut className="w-4 h-4 text-rose-600" />
+              <span>Exit Official Mode</span>
+            </button>
+          )}
+
           <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
             <span className="text-xs text-slate-500">{t.nav.languageLabel}</span>
             <div className="flex items-center gap-1.5 text-xs">

@@ -305,3 +305,184 @@ Explain why LokSanket flagged this issue following the decision-support instruct
     }`
   );
 }
+
+export interface PriorityEvidenceItem {
+  id: string;
+  title: string;
+  category: string;
+  subcategory?: string;
+  wardIds: string[];
+  priorityScore: number;
+  priorityLevel: "High" | "Medium" | "Low";
+  reportCount: number;
+  localityCount: number;
+  localities: string[];
+  recentTrendPercent: number;
+  recentCount: number;
+  previousCount: number;
+  severityScore: number;
+  geographicScore: number;
+  evidenceScore: number;
+  photoCount: number;
+  affectedGroups: string[];
+  humanReview: {
+    decision: "accept" | "adjust" | "reject" | null;
+    adjustedPriorityLevel?: "high" | "medium" | "low";
+    note?: string;
+    reviewedAt?: string;
+  } | null;
+}
+
+export interface BriefEvidencePayload {
+  constituency: string;
+  generatedAt: string;
+  totalReports: number;
+  totalClusters: number;
+  reportsLast14Days: number;
+  priorities: PriorityEvidenceItem[];
+}
+
+export interface GeminiBriefPriority {
+  title: string;
+  summary: string;
+  evidence: string[];
+  affectedAreas: string[];
+  fieldVerification: string;
+}
+
+export interface GeminiBriefResponse {
+  executiveSummary: string;
+  priorities: GeminiBriefPriority[];
+  dataLimitations: string[];
+}
+
+const BRIEF_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    executiveSummary: {
+      type: Type.STRING,
+      description:
+        "Concise, objective executive overview of current constituency development signals based strictly on the provided evidence.",
+    },
+    priorities: {
+      type: Type.ARRAY,
+      description: "Structured synthesis for each supplied priority cluster in the exact order provided.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          title: {
+            type: Type.STRING,
+            description: "Title of the priority issue, matching the input",
+          },
+          summary: {
+            type: Type.STRING,
+            description:
+              "Clear 1-2 sentence description explaining the problem and civic impact using supplied numbers only.",
+          },
+          evidence: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description:
+              "Bullet points highlighting verified evidence: report counts, recent trend, photo submissions, and severity from the payload.",
+          },
+          affectedAreas: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "List of specific affected localities provided in the evidence.",
+          },
+          fieldVerification: {
+            type: Type.STRING,
+            description:
+              "Recommended on-ground checks or technical verification points for constituency engineers or field officers before taking action.",
+          },
+        },
+        required: ["title", "summary", "evidence", "affectedAreas", "fieldVerification"],
+      },
+    },
+    dataLimitations: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description:
+        "Objective data limitations regarding reporting periods, sample representation, synthetic demonstration nature, or need for field validation.",
+    },
+  },
+  required: ["executiveSummary", "priorities", "dataLimitations"],
+};
+
+export async function generateDevelopmentBriefWithGemini(
+  evidence: BriefEvidencePayload
+): Promise<GeminiBriefResponse> {
+  const ai = getAiClient();
+
+  const briefSystemPrompt = `
+You are the development intelligence synthesis component for LokSanket, an AI-powered constituency development decision-support platform.
+Your purpose is to transform verified, deterministic civic evidence into a concise, professional constituency development brief for human municipal leadership.
+
+CRITICAL RULES:
+1. The supplied evidence object is complete, verified, and authoritative. Every number, percentage, report count, locality name, and priority score you reference MUST come directly and exactly from the supplied evidence payload.
+2. DO NOT calculate, invent, estimate, or modify any statistics, percentages, counts, scores, or trend metrics.
+3. DO NOT invent unsupported locations, ward numbers, or demographic groups. Only reference localities explicitly present in the evidence.
+4. This platform is a decision-support system, NOT an autonomous government decision-maker.
+   - Use objective phrasing: "LokSanket identifies these as high-priority issues based on the available evidence."
+   - NEVER use directive language like "The government must fix these issues" or "Authorities are mandated to...".
+5. Human review decisions must be represented accurately:
+   - If a priority has an official decision (accept, adjust, reject), state both the AI recommendation and the official human decision (e.g., "AI Recommendation: High — 85.4; Official Decision: Adjusted to Medium" or "Official Decision: Accepted").
+   - NEVER rewrite or modify the deterministic score.
+6. Note that the data is "Realistic Demonstration Data" where appropriate.
+7. Formulate actionable, specific field verification recommendations for municipal engineers to verify on the ground prior to work orders.
+8. Output valid JSON strictly conforming to the requested schema.
+`;
+
+  const userPrompt = `
+Verified Constituency Evidence Payload from LokSanket:
+${JSON.stringify(evidence, null, 2)}
+
+Generate the structured Development Brief for constituency officials strictly following the instructions and schema.
+`;
+
+  const preferredModel = process.env.GEMINI_MODEL;
+  const candidateModels = preferredModel
+    ? [preferredModel, "gemini-3.5-flash-lite", "gemini-3.8-flash"]
+    : ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-flash-lite"];
+
+  let lastError: unknown = null;
+
+  for (const model of candidateModels) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: userPrompt,
+        config: {
+          systemInstruction: briefSystemPrompt,
+          responseMimeType: "application/json",
+          responseSchema: BRIEF_SCHEMA,
+          temperature: 0.2,
+        },
+      });
+
+      const responseText = response.text?.trim();
+      if (responseText) {
+        const parsed = JSON.parse(responseText) as GeminiBriefResponse;
+        if (
+          parsed &&
+          typeof parsed.executiveSummary === "string" &&
+          Array.isArray(parsed.priorities) &&
+          Array.isArray(parsed.dataLimitations)
+        ) {
+          return parsed;
+        }
+      }
+    } catch (err: unknown) {
+      lastError = err;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn(`[lib/gemini] Model ${model} development brief attempt failed:`, errMsg);
+    }
+  }
+
+  throw new Error(
+    `Failed to generate development brief with Gemini: ${
+      lastError instanceof Error ? lastError.message : "Unknown error"
+    }`
+  );
+}
+

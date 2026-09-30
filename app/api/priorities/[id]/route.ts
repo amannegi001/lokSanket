@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { IssueCluster } from "@/models/IssueCluster";
 import { Complaint } from "@/models/Complaint";
+import { Review } from "@/models/Review";
 import { PRIORITY_CONFIG } from "@/lib/priority";
 
 interface RouteContext {
@@ -128,9 +129,55 @@ export async function GET(request: Request, context: RouteContext) {
       isIncreasing: (ev?.trendPercent ?? 0) > 0,
     };
 
+    // 5. Canonical Human Review retrieval
+    const latestReview = await Review.findOne({ clusterId: cluster._id })
+      .sort({ reviewedAt: -1, createdAt: -1 })
+      .lean();
+
+    let canonicalReview: {
+      _id?: string;
+      clusterId?: string;
+      decision: "accept" | "adjust" | "reject";
+      note: string;
+      adjustedPriorityLevel?: "high" | "medium" | "low";
+      reviewedAt?: string;
+    } | null = null;
+
+    if (latestReview && latestReview.decision) {
+      canonicalReview = {
+        _id: latestReview._id?.toString(),
+        clusterId: id,
+        decision: latestReview.decision,
+        note: latestReview.note || "",
+        adjustedPriorityLevel: latestReview.adjustedPriorityLevel,
+        reviewedAt: latestReview.reviewedAt ? new Date(latestReview.reviewedAt).toISOString() : undefined,
+      };
+    } else if (cluster.review && cluster.review.decision) {
+      canonicalReview = {
+        clusterId: id,
+        decision: cluster.review.decision,
+        note: cluster.review.note || "",
+        adjustedPriorityLevel: cluster.review.adjustedPriorityLevel,
+        reviewedAt: cluster.review.reviewedAt ? new Date(cluster.review.reviewedAt).toISOString() : undefined,
+      };
+    }
+
+    const responseCluster = {
+      ...cluster,
+      review: canonicalReview,
+      officialDecision: canonicalReview
+        ? canonicalReview.decision === "accept"
+          ? "approved_for_action"
+          : canonicalReview.decision === "adjust"
+          ? "approved_for_action"
+          : "deferred"
+        : "pending_review",
+    };
+
     return NextResponse.json({
       success: true,
-      cluster,
+      cluster: responseCluster,
+      review: canonicalReview,
       scoreBreakdown,
       localityBreakdown,
       temporalComparison,

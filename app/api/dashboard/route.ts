@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Complaint } from "@/models/Complaint";
 import { IssueCluster } from "@/models/IssueCluster";
+import { Review } from "@/models/Review";
 
 export async function GET() {
   try {
     await connectDB();
 
-    // 1. Fetch high-level KPIs and cluster summary from actual MongoDB records
+    // 1. Fetch high-level KPIs, cluster summary, and canonical reviews from MongoDB
     const [
       totalReports,
       clusters,
+      reviews,
       distinctLocalities,
       reportsThisMonth,
       categoryAgg,
@@ -24,7 +26,10 @@ export async function GET() {
         .sort({ priorityScore: -1, reportCount: -1 })
         .lean(),
 
-      // C. Distinct affected localities
+      // C. All canonical official reviews
+      Review.find().sort({ reviewedAt: -1, createdAt: -1 }).lean(),
+
+      // D. Distinct affected localities
       Complaint.distinct("location"),
 
       // D. Reports in active month cycle (last 30 days)
@@ -91,6 +96,64 @@ export async function GET() {
       count: item.count,
     }));
 
+    // Map canonical reviews by clusterId
+    const reviewByClusterId = new Map<string, typeof reviews[0]>();
+    for (const r of reviews) {
+      const cId = r.clusterId?.toString();
+      if (cId && !reviewByClusterId.has(cId)) {
+        reviewByClusterId.set(cId, r);
+      }
+    }
+
+    // Attach canonical review to each cluster
+    const clustersWithReviews = clusters.map((c) => {
+      const cId = c._id.toString();
+      const canonicalReview = reviewByClusterId.get(cId);
+
+      if (canonicalReview && canonicalReview.decision) {
+        return {
+          ...c,
+          officialDecision:
+            canonicalReview.decision === "accept"
+              ? "approved_for_action"
+              : canonicalReview.decision === "adjust"
+              ? "approved_for_action"
+              : "deferred",
+          review: {
+            _id: canonicalReview._id?.toString(),
+            clusterId: cId,
+            decision: canonicalReview.decision,
+            note: canonicalReview.note || "",
+            adjustedPriorityLevel: canonicalReview.adjustedPriorityLevel,
+            reviewedAt: canonicalReview.reviewedAt
+              ? new Date(canonicalReview.reviewedAt).toISOString()
+              : undefined,
+          },
+        };
+      }
+
+      if (c.review && c.review.decision) {
+        return {
+          ...c,
+          review: {
+            decision: c.review.decision,
+            note: c.review.note || "",
+            adjustedPriorityLevel: c.review.adjustedPriorityLevel,
+            reviewedAt: c.review.reviewedAt
+              ? new Date(c.review.reviewedAt).toISOString()
+              : undefined,
+          },
+        };
+      }
+
+      // No actual human review decision exists
+      return {
+        ...c,
+        officialDecision: "pending_review",
+        review: null,
+      };
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -105,8 +168,8 @@ export async function GET() {
         },
         categoryDistribution,
         trendTimeline,
-        topClusters: clusters.slice(0, 10),
-        clusters, // Full set of sorted clusters for instant frontend filtering
+        topClusters: clustersWithReviews.slice(0, 10),
+        clusters: clustersWithReviews, // Full set of sorted clusters for instant frontend filtering
         datasetInfo: {
           isSynthetic: true,
           label: "Realistic Demonstration Data",

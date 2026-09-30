@@ -23,6 +23,13 @@ export interface IClusterEvidence {
   priorityScore: number;
 }
 
+export interface IIssueClusterReview {
+  decision: "accept" | "adjust" | "reject";
+  note?: string;
+  adjustedPriorityLevel?: "high" | "medium" | "low";
+  reviewedAt: Date;
+}
+
 export interface IIssueCluster extends Document {
   title: string;
   category: string;
@@ -39,6 +46,7 @@ export interface IIssueCluster extends Document {
   evidence: IClusterEvidence;
   aiExplanation?: string;
   officialDecision?: string;
+  review?: IIssueClusterReview;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -158,6 +166,33 @@ const IssueClusterSchema = new Schema<IIssueCluster>(
       ],
       default: "pending_review",
       index: true,
+    },
+    review: {
+      type: new Schema<IIssueClusterReview>(
+        {
+          decision: {
+            type: String,
+            enum: ["accept", "adjust", "reject"],
+            required: true,
+          },
+          note: {
+            type: String,
+            trim: true,
+            default: "",
+          },
+          adjustedPriorityLevel: {
+            type: String,
+            enum: ["high", "medium", "low"],
+          },
+          reviewedAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+        { _id: false }
+      ),
+      required: false,
+      default: undefined,
     },
     createdAt: {
       type: Date,
