@@ -17,7 +17,9 @@ export const metadata: Metadata = {
   title: "LokSanket | Constituency Development Intelligence Platform",
   description: "AI-powered civic grievance intelligence and decision support platform",
   icons: {
-    icon: "/logo.svg",
+    icon: "/loksanket-logo-light.png",
+    shortcut: "/loksanket-logo-light.png",
+    apple: "/loksanket-logo-light.png",
   },
 };
 

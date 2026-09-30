@@ -2,25 +2,100 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Complaint } from "@/models/Complaint";
 import { extractComplaintWithGemini } from "@/lib/gemini";
+import { validatePhotoFile, storePhotoInGridFS } from "@/lib/storage";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json().catch(() => null);
+    const contentType = request.headers.get("content-type") || "";
+    let rawText = "";
+    let location = "";
+    let requestedLanguage = "";
+    let imageUrl: string | undefined = undefined;
+    let uploadedFile: File | null = null;
 
-    if (!body || typeof body !== "object") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid request payload. Expected JSON object.",
-        },
-        { status: 400 }
-      );
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      rawText = (
+        (formData.get("rawText") as string) ||
+        (formData.get("text") as string) ||
+        ""
+      ).trim();
+      location = (
+        (formData.get("location") as string) ||
+        (formData.get("locality") as string) ||
+        ""
+      ).trim();
+      requestedLanguage = (
+        (formData.get("language") as string) ||
+        ""
+      ).trim();
+      imageUrl = (
+        (formData.get("imageUrl") as string) ||
+        ""
+      ).trim() || undefined;
+
+      const fileEntry =
+        formData.get("photo") ||
+        formData.get("file") ||
+        formData.get("image");
+
+      if (
+        fileEntry &&
+        typeof fileEntry === "object" &&
+        "size" in fileEntry &&
+        (fileEntry as File).size > 0
+      ) {
+        uploadedFile = fileEntry as File;
+      }
+    } else {
+      const body = await request.json().catch(() => null);
+
+      if (!body || typeof body !== "object") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Invalid request payload. Expected JSON object or FormData.",
+          },
+          { status: 400 }
+        );
+      }
+
+      rawText = (body.rawText || body.text || "").trim();
+      location = (body.location || body.locality || "").trim();
+      requestedLanguage = (body.language || "").trim();
+      imageUrl = (body.imageUrl || "").trim() || undefined;
     }
 
-    const rawText = (body.rawText || body.text || "").trim();
-    const location = (body.location || body.locality || "").trim();
-    const requestedLanguage = (body.language || "").trim();
-    const imageUrl = (body.imageUrl || "").trim() || undefined;
+    // Process photo file if uploaded
+    if (uploadedFile) {
+      const validation = validatePhotoFile(uploadedFile);
+      if (!validation.valid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: validation.error || "Invalid photo file.",
+          },
+          { status: 400 }
+        );
+      }
+
+      try {
+        const stored = await storePhotoInGridFS(uploadedFile);
+        imageUrl = stored.url;
+      } catch (storageError: unknown) {
+        console.error(
+          "[POST /api/complaints] Failed to store photo in GridFS:",
+          storageError
+        );
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Failed to store uploaded photo evidence. Please try again.",
+          },
+          { status: 500 }
+        );
+      }
+    }
 
     if (!rawText) {
       return NextResponse.json(

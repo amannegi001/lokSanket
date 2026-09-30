@@ -1,18 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useLanguage } from "@/context/LanguageContext";
-import { CheckCircle2, ArrowRight, Camera, MapPin, AlertCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ArrowRight,
+  Camera,
+  MapPin,
+  AlertCircle,
+} from "lucide-react";
+import { validatePhotoFile } from "@/lib/photo-validation";
 
 export default function ReportIssuePage() {
   const { t } = useLanguage();
   const [complaintText, setComplaintText] = useState("");
   const [location, setLocation] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
   const [language, setLanguage] = useState("auto");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submittedData, setSubmittedData] = useState<{
@@ -23,9 +34,57 @@ export default function ReportIssuePage() {
     summary: string;
     location?: string;
     language?: string;
+    imageUrl?: string;
     affectedGroups?: string[];
     keywords?: string[];
   } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handleFileChange = (file: File | null) => {
+    setFileError(null);
+    if (!file) return;
+
+    const validation = validatePhotoFile(file);
+    if (!validation.valid) {
+      setFileError(validation.error || "Invalid file format or size.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleRemoveFile = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setFileError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileChange(e.dataTransfer.files[0]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,18 +94,32 @@ export default function ReportIssuePage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/complaints", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          rawText: complaintText,
-          location: location.trim() || undefined,
-          language: language !== "auto" ? language : undefined,
-          imageUrl: imageUrl.trim() || undefined,
-        }),
-      });
+      let response: Response;
+
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("rawText", complaintText);
+        if (location.trim()) formData.append("location", location.trim());
+        if (language !== "auto") formData.append("language", language);
+        formData.append("photo", selectedFile);
+
+        response = await fetch("/api/complaints", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        response = await fetch("/api/complaints", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            rawText: complaintText,
+            location: location.trim() || undefined,
+            language: language !== "auto" ? language : undefined,
+          }),
+        });
+      }
 
       const data = await response.json();
 
@@ -62,6 +135,7 @@ export default function ReportIssuePage() {
         summary: data.complaint?.summary || complaintText.slice(0, 100),
         location: data.complaint?.location,
         language: data.complaint?.language,
+        imageUrl: data.complaint?.imageUrl,
         affectedGroups: data.complaint?.affectedGroups,
         keywords: data.complaint?.keywords,
       });
@@ -205,20 +279,117 @@ export default function ReportIssuePage() {
                 </div>
               </div>
 
-              {/* Field 4: Optional Photo */}
+              {/* Field 4: Optional Photo / Evidence */}
               <div className="space-y-1.5">
-                <label htmlFor="photo" className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1">
                   <Camera className="w-3.5 h-3.5 text-slate-400" />
                   {t.report.photoLabel}
                 </label>
-                <input
-                  id="photo"
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder={t.report.photoPlaceholder}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600"
-                />
+
+                {!selectedFile ? (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
+                      isDragging
+                        ? "border-indigo-500 bg-indigo-50/50"
+                        : "border-slate-300 hover:border-indigo-400 bg-slate-50/50 hover:bg-slate-50"
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleFileChange(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden"
+                      id="photo-file-input"
+                    />
+                    <div className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-indigo-600">
+                      <Camera className="w-5 h-5" />
+                    </div>
+                    <div className="text-center space-y-0.5">
+                      <span className="text-xs font-semibold text-indigo-700 hover:text-indigo-800">
+                        {t.report.photoUploadBtn}
+                      </span>
+                      <p className="text-[11px] text-slate-500">
+                        {t.report.photoFormatHint}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-white shadow-2xs gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {previewUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={previewUrl}
+                          alt="Evidence preview"
+                          className="w-14 h-14 rounded-md object-cover border border-slate-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-md bg-slate-100 flex items-center justify-center shrink-0">
+                          <Camera className="w-6 h-6 text-slate-400" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p
+                          className="text-xs font-semibold text-slate-800 truncate"
+                          title={selectedFile.name}
+                        >
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 rounded border border-indigo-200 transition-colors cursor-pointer"
+                      >
+                        {t.report.photoChangeBtn}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveFile}
+                        className="px-2.5 py-1 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded border border-rose-200 transition-colors cursor-pointer"
+                      >
+                        {t.report.photoRemoveBtn}
+                      </button>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleFileChange(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden"
+                      id="photo-file-input-change"
+                    />
+                  </div>
+                )}
+
+                {fileError && (
+                  <div className="p-2 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>{fileError}</span>
+                  </div>
+                )}
+
                 <span className="text-[11px] text-slate-500 block">
                   {t.report.photoHint}
                 </span>
@@ -328,6 +499,16 @@ export default function ReportIssuePage() {
                 </div>
               )}
 
+              {submittedData.imageUrl && (
+                <div className="flex items-center justify-between text-slate-600">
+                  <span>{t.report.photoLabel.split("(")[0].trim()}:</span>
+                  <span className="text-emerald-700 font-medium flex items-center gap-1 text-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Attached ({submittedData.imageUrl.split("/").pop()})
+                  </span>
+                </div>
+              )}
+
               <div className="pt-2.5 border-t border-slate-200/80 text-slate-700 leading-relaxed italic bg-white p-3 rounded-lg border border-slate-200/60">
                 &ldquo;{submittedData.summary}&rdquo;
               </div>
@@ -347,7 +528,8 @@ export default function ReportIssuePage() {
                   setSubmittedData(null);
                   setComplaintText("");
                   setLocation("");
-                  setImageUrl("");
+                  handleRemoveFile();
+                  setError(null);
                 }}
                 className="w-full sm:w-auto px-5 py-2.5 rounded-md border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
               >

@@ -123,6 +123,10 @@ export interface Translations {
     photoLabel: string;
     photoPlaceholder: string;
     photoHint: string;
+    photoUploadBtn: string;
+    photoFormatHint: string;
+    photoChangeBtn: string;
+    photoRemoveBtn: string;
     submitBtn: string;
     submittingBtn: string;
     submitHint: string;
@@ -330,9 +334,13 @@ export const translations: Record<Language, Translations> = {
       localityPlaceholder: "e.g. Ward 17 - Gandhi Nagar Main Road",
       languageLabel: "Language",
       autoDetect: "Auto-detect",
-      photoLabel: "Optional Photo Link / Evidence",
+      photoLabel: "Photo / Evidence (Optional)",
       photoPlaceholder: "https://example.com/photo.jpg",
       photoHint: "Photographs help verify ground reality and strengthen the evidence trail.",
+      photoUploadBtn: "Upload a photo",
+      photoFormatHint: "JPG, PNG or WEBP · Max 5 MB",
+      photoChangeBtn: "Change",
+      photoRemoveBtn: "Remove",
       submitBtn: "Submit Report",
       submittingBtn: "Submitting report...",
       submitHint: "Submissions are compiled into evidence-backed development priorities.",
@@ -539,9 +547,13 @@ export const translations: Record<Language, Translations> = {
       localityPlaceholder: "उदा. वार्ड 17 - गांधी नगर मुख्य मार्ग",
       languageLabel: "भाषा",
       autoDetect: "स्वचालित पहचान (Auto-detect)",
-      photoLabel: "वैकल्पिक फोटो लिंक / साक्ष्य",
+      photoLabel: "फोटो / साक्ष्य (वैकल्पिक)",
       photoPlaceholder: "https://example.com/photo.jpg",
       photoHint: "तस्वीरें जमीनी हकीकत को सत्यापित करने और साक्ष्य श्रृंखला को मजबूत करने में मदद करती हैं।",
+      photoUploadBtn: "फोटो अपलोड करें",
+      photoFormatHint: "JPG, PNG या WEBP · अधिकतम 5 MB",
+      photoChangeBtn: "बदलें",
+      photoRemoveBtn: "हटाएं",
       submitBtn: "रिपोर्ट सबमिट करें",
       submittingBtn: "रिपोर्ट सबमिट हो रही है...",
       submitHint: "शिकायतें साक्ष्य-समर्थित विकास प्राथमिकताओं में संकलित की जाती हैं।",

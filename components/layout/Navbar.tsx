@@ -156,11 +156,11 @@ export default function Navbar() {
             className="flex items-center group"
           >
             <Image
-              src="/logo.svg"
+              src="/loksanket-logo-light.png"
               alt="LokSanket — Civic Development Intelligence"
-              width={1200}
-              height={360}
-              className="h-9 sm:h-10 w-auto object-contain"
+              width={875}
+              height={724}
+              className="h-10 sm:h-11 md:h-12 w-auto object-contain"
               priority
             />
           </Link>
