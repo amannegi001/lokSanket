@@ -273,7 +273,7 @@ export default function Navbar() {
                 title="Access official review workspace (Demo)"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-indigo-700" />
-                <span>Official Review (Demo)</span>
+                <span>{t.nav.officialReviewBtn}</span>
               </Link>
 
               {/* Citizen CTA: Report an Issue */}
@@ -339,7 +339,7 @@ export default function Navbar() {
               className="block py-1.5 text-sm font-semibold text-indigo-700 flex items-center gap-1.5"
             >
               <ShieldCheck className="w-4 h-4 text-indigo-700" />
-              <span>Official Review (Demo)</span>
+              <span>{t.nav.officialReviewBtn}</span>
             </Link>
           )}
 

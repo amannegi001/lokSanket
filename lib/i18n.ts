@@ -12,6 +12,7 @@ export interface Translations {
     reportCta: string;
     reportShort: string;
     languageLabel: string;
+    officialReviewBtn: string;
   };
   hero: {
     eyebrow: string;
@@ -141,6 +142,105 @@ export interface Translations {
     viewInsightsBtn: string;
     reportAnotherBtn: string;
   };
+  dashboard: {
+    workspaceSubtitlePublic: string;
+    workspaceSubtitleOfficial: string;
+    demoBadge: string;
+    publicReadOnly: string;
+    titlePublic: string;
+    titleOfficial: string;
+    subtitlePublic: string;
+    subtitleOfficial: string;
+    officialReviewBtn: string;
+    reportIssueBtn: string;
+    briefsBtn: string;
+    recalculateBtn: string;
+    exitOfficialBtn: string;
+
+    kpiTotalReports: string;
+    kpiAcrossCategories: (count: number) => string;
+    kpiHighPriority: string;
+    kpiHighPrioritySub: string;
+    kpiMediumPriority: string;
+    kpiMediumPrioritySub: string;
+    kpiAffectedLocalities: string;
+    kpiAffectedLocalitiesSub: string;
+
+    tableHeading: string;
+    tableSubPublic: string;
+    tableSubOfficial: string;
+    filterAllPriorities: string;
+    filterHighOnly: string;
+    filterMediumOnly: string;
+    filterLowOnly: string;
+    filterAllCategories: string;
+
+    colIssueCluster: string;
+    colCategory: string;
+    colWardsLocalities: string;
+    colReports: string;
+    colTrend: string;
+    colEvidence: string;
+    colPriorityScore: string;
+    colOfficialDecision: string;
+    colAction: string;
+
+    noIssuesMatch: string;
+    evidencePhotos: (count: number) => string;
+    evidenceTextOnly: string;
+    levelHigh: string;
+    levelMedium: string;
+    levelLow: string;
+    viewEvidence: string;
+    reviewAndAction: string;
+
+    decisionAccepted: string;
+    decisionAdjusted: string;
+    decisionRejected: string;
+    decisionPending: string;
+
+    showingCount: (displayed: number, total: number) => string;
+    showTop5Only: string;
+    viewAllIssues: (total: number) => string;
+
+    publicFootnoteNotice: string;
+    publicFootnoteLink: string;
+
+    chartTrendHeading: string;
+    chartTrendSub: string;
+    chartCategoryHeading: string;
+    chartCategorySub: string;
+    chartReportsSeries: string;
+
+    provenanceHeading: string;
+    provenanceBody: string;
+    constituencyLabel: string;
+    datasetLabel: string;
+    publicOrientation: string;
+    officialOrientation: string;
+
+    loadingSummary: string;
+    loadingSub: string;
+    loadError: string;
+    retryBtn: string;
+
+    recentReportsHeading: string;
+    recentReportsSub: string;
+    recentReportsColCategory: string;
+    recentReportsColSubcategory: string;
+    recentReportsColWard: string;
+    recentReportsColTime: string;
+    recentReportsColSeverity: string;
+    recentReportsColStatus: string;
+    statusAwaitingClustering: string;
+    statusClustered: string;
+    timeJustNow: string;
+    timeMinutesAgo: (m: number) => string;
+    timeHoursAgo: (h: number) => string;
+    timeDaysAgo: (d: number) => string;
+    pipelineNotice: string;
+    noRecentReports: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -156,6 +256,7 @@ export const translations: Record<Language, Translations> = {
       reportCta: "Report an Issue",
       reportShort: "Report",
       languageLabel: "Language:",
+      officialReviewBtn: "Official Review (Demo)",
     },
     hero: {
       eyebrow: "AI-powered civic development intelligence",
@@ -357,6 +458,105 @@ export const translations: Record<Language, Translations> = {
       viewInsightsBtn: "View in Development Insights",
       reportAnotherBtn: "Report Another Issue",
     },
+    dashboard: {
+      workspaceSubtitlePublic: "Constituency Decision Support",
+      workspaceSubtitleOfficial: "Official Governance Workspace",
+      demoBadge: "Realistic Demonstration Data",
+      publicReadOnly: "Public Read-Only",
+      titlePublic: "Development Intelligence Dashboard",
+      titleOfficial: "Official Priority & Review Dashboard",
+      subtitlePublic: "Aggregated civic demand volume, severity mapping, recent trends and ground evidence.",
+      subtitleOfficial: "Operational workspace for reviewing AI priorities, recording official human decisions, and synthesizing evidence briefs.",
+      officialReviewBtn: "Official Review (Demo)",
+      reportIssueBtn: "+ Report Issue",
+      briefsBtn: "Development Brief",
+      recalculateBtn: "Recalculate Priorities",
+      exitOfficialBtn: "Exit Official Mode",
+
+      kpiTotalReports: "Total Reports",
+      kpiAcrossCategories: (count: number) => `Across ${count} civic categories`,
+      kpiHighPriority: "High-Priority Issues",
+      kpiHighPrioritySub: "Score ≥ 70.0 based on 5 deterministic factors",
+      kpiMediumPriority: "Medium Priority",
+      kpiMediumPrioritySub: "Score between 40.0 and 69.9",
+      kpiAffectedLocalities: "Affected Localities",
+      kpiAffectedLocalitiesSub: "Distinct geographic zones reporting issues",
+
+      tableHeading: "Prioritized Constituency Issues",
+      tableSubPublic: "Ranked transparently by demand volume, severity, trend velocity, geographic spread, and photo evidence.",
+      tableSubOfficial: "Review deterministic AI recommendations and record official governance decisions.",
+      filterAllPriorities: "All Priorities",
+      filterHighOnly: "High Priority Only",
+      filterMediumOnly: "Medium Priority Only",
+      filterLowOnly: "Low Priority Only",
+      filterAllCategories: "All Categories",
+
+      colIssueCluster: "Issue Cluster",
+      colCategory: "Category",
+      colWardsLocalities: "Wards / Localities",
+      colReports: "Reports",
+      colTrend: "Trend",
+      colEvidence: "Evidence",
+      colPriorityScore: "Priority Score",
+      colOfficialDecision: "Official Decision",
+      colAction: "Action",
+
+      noIssuesMatch: "No issues match the selected filter.",
+      evidencePhotos: (count: number) => `${count} photos`,
+      evidenceTextOnly: "Text reports",
+      levelHigh: "High",
+      levelMedium: "Medium",
+      levelLow: "Low",
+      viewEvidence: "View Evidence",
+      reviewAndAction: "Review & Action",
+
+      decisionAccepted: "ACCEPTED",
+      decisionAdjusted: "ADJUSTED",
+      decisionRejected: "REJECTED",
+      decisionPending: "PENDING",
+
+      showingCount: (displayed: number, total: number) => `Showing ${displayed} of ${total} issues`,
+      showTop5Only: "Show Top 5 Only ↑",
+      viewAllIssues: (total: number) => `View all ${total} issues →`,
+
+      publicFootnoteNotice: "Official review decisions and priority adjustments are managed through the Official Review workflow.",
+      publicFootnoteLink: "Official Review (Demo) →",
+
+      chartTrendHeading: "Grievance Ingestion Trend (Last 28 Days)",
+      chartTrendSub: "Daily complaint filings identifying active surges",
+      chartCategoryHeading: "Category Distribution",
+      chartCategorySub: "Breakdown across civic service domains",
+      chartReportsSeries: "Reports",
+
+      provenanceHeading: "Data Provenance & Mathematical Engine",
+      provenanceBody: "LokSanket operates on a five-factor deterministic scoring model combining Demand Volume (30%), Severity (25%), Trend Velocity (15%), Geographic Spread (15%), and Verified Evidence (15%). Priority scores are computed strictly through algorithmic weights rather than generative estimates.",
+      constituencyLabel: "Constituency:",
+      datasetLabel: "Dataset:",
+      publicOrientation: "Public insights view · Decision-support orientation",
+      officialOrientation: "Official workspace with review authority",
+
+      loadingSummary: "Loading Constituency Intelligence Summary...",
+      loadingSub: "Grounded directly in MongoDB Atlas data.",
+      loadError: "Unable to load dashboard data",
+      retryBtn: "Retry",
+
+      recentReportsHeading: "Recent Citizen Reports",
+      recentReportsSub: "Live intake of citizen feedback parsed by Gemini, showing real-time ingestion status before and after clustering.",
+      recentReportsColCategory: "Category",
+      recentReportsColSubcategory: "Subcategory",
+      recentReportsColWard: "Ward / Zone",
+      recentReportsColTime: "Received",
+      recentReportsColSeverity: "Severity",
+      recentReportsColStatus: "Pipeline Status",
+      statusAwaitingClustering: "Awaiting Clustering",
+      statusClustered: "Clustered",
+      timeJustNow: "Just now",
+      timeMinutesAgo: (m: number) => `${m}m ago`,
+      timeHoursAgo: (h: number) => `${h}h ago`,
+      timeDaysAgo: (d: number) => `${d}d ago`,
+      pipelineNotice: "Citizen submission → Gemini understanding → Awaiting periodic clustering or clustered into priority intelligence.",
+      noRecentReports: "No recent citizen reports recorded yet.",
+    },
   },
   hi: {
     nav: {
@@ -370,6 +570,7 @@ export const translations: Record<Language, Translations> = {
       reportCta: "समस्या दर्ज करें",
       reportShort: "रिपोर्ट करें",
       languageLabel: "भाषा:",
+      officialReviewBtn: "आधिकारिक समीक्षा (डेमो)",
     },
     hero: {
       eyebrow: "एआई-संचालित नागरिक विकास इंटेलिजेंस",
@@ -571,5 +772,271 @@ export const translations: Record<Language, Translations> = {
       viewInsightsBtn: "विकास अंतर्दृष्टि में देखें",
       reportAnotherBtn: "एक और समस्या दर्ज करें",
     },
+    dashboard: {
+      workspaceSubtitlePublic: "निर्वाचन क्षेत्र निर्णय-सहायता",
+      workspaceSubtitleOfficial: "आधिकारिक शासन कार्यक्षेत्र",
+      demoBadge: "यथार्थवादी प्रदर्शन डेटा",
+      publicReadOnly: "सार्वजनिक केवल-दृश्य",
+      titlePublic: "विकास इंटेलिजेंस डैशबोर्ड",
+      titleOfficial: "आधिकारिक प्राथमिकता एवं समीक्षा डैशबोर्ड",
+      subtitlePublic: "संकलित नागरिक मांग, गंभीरता मानचित्रण, हालिया रुझान और जमीनी साक्ष्य।",
+      subtitleOfficial: "एआई प्राथमिकताओं की समीक्षा, आधिकारिक मानवीय निर्णयों को दर्ज करने और साक्ष्य संक्षेप तैयार करने हेतु परिचालन कार्यक्षेत्र।",
+      officialReviewBtn: "आधिकारिक समीक्षा (डेमो)",
+      reportIssueBtn: "+ समस्या दर्ज करें",
+      briefsBtn: "विकास संक्षेप",
+      recalculateBtn: "प्राथमिकताएं पुनर्गणना करें",
+      exitOfficialBtn: "आधिकारिक मोड से बाहर निकलें",
+
+      kpiTotalReports: "कुल रिपोर्टें",
+      kpiAcrossCategories: (count: number) => `${count} नागरिक श्रेणियों में`,
+      kpiHighPriority: "उच्च प्राथमिकता वाली समस्याएं",
+      kpiHighPrioritySub: "5 वस्तुनिष्ठ कारकों के आधार पर स्कोर ≥ 70.0",
+      kpiMediumPriority: "मध्यम प्राथमिकता",
+      kpiMediumPrioritySub: "40.0 और 69.9 के बीच स्कोर",
+      kpiAffectedLocalities: "प्रभावित क्षेत्र",
+      kpiAffectedLocalitiesSub: "समस्याएं दर्ज करने वाले विभिन्न भौगोलिक क्षेत्र",
+
+      tableHeading: "प्राथमिकता-प्राप्त निर्वाचन क्षेत्र समस्याएं",
+      tableSubPublic: "मांग की मात्रा, गंभीरता, रुझान गति, भौगोलिक फैलाव और फोटो साक्ष्यों के आधार पर पारदर्शी रैंकिंग।",
+      tableSubOfficial: "वस्तुनिष्ठ एआई अनुशंसाओं की समीक्षा करें और आधिकारिक शासन निर्णय दर्ज करें।",
+      filterAllPriorities: "सभी प्राथमिकताएं",
+      filterHighOnly: "केवल उच्च प्राथमिकता",
+      filterMediumOnly: "केवल मध्यम प्राथमिकता",
+      filterLowOnly: "केवल निम्न प्राथमिकता",
+      filterAllCategories: "सभी श्रेणियां",
+
+      colIssueCluster: "समस्या समूह",
+      colCategory: "श्रेणी",
+      colWardsLocalities: "वार्ड / क्षेत्र",
+      colReports: "रिपोर्टें",
+      colTrend: "रुझान",
+      colEvidence: "साक्ष्य",
+      colPriorityScore: "प्राथमिकता स्कोर",
+      colOfficialDecision: "आधिकारिक निर्णय",
+      colAction: "कार्रवाई",
+
+      noIssuesMatch: "चयनित फ़िल्टर से मेल खाने वाली कोई समस्या नहीं है।",
+      evidencePhotos: (count: number) => `${count} तस्वीरें`,
+      evidenceTextOnly: "टेक्स्ट रिपोर्टें",
+      levelHigh: "उच्च",
+      levelMedium: "मध्यम",
+      levelLow: "निम्न",
+      viewEvidence: "साक्ष्य देखें",
+      reviewAndAction: "समीक्षा और कार्रवाई",
+
+      decisionAccepted: "स्वीकृत",
+      decisionAdjusted: "समायोजित",
+      decisionRejected: "अस्वीकृत",
+      decisionPending: "लंबित",
+
+      showingCount: (displayed: number, total: number) => `${total} में से ${displayed} समस्याएं प्रदर्शित`,
+      showTop5Only: "केवल शीर्ष 5 दिखाएं ↑",
+      viewAllIssues: (total: number) => `सभी ${total} समस्याएं देखें →`,
+
+      publicFootnoteNotice: "आधिकारिक समीक्षा निर्णय और प्राथमिकता समायोजन आधिकारिक समीक्षा कार्यप्रवाह के माध्यम से प्रबंधित किए जाते हैं।",
+      publicFootnoteLink: "आधिकारिक समीक्षा (डेमो) →",
+
+      chartTrendHeading: "शिकायत प्राप्ति रुझान (पिछले 28 दिन)",
+      chartTrendSub: "सक्रिय वृद्धि की पहचान करने वाली दैनिक शिकायतें",
+      chartCategoryHeading: "श्रेणी वितरण",
+      chartCategorySub: "नागरिक सेवा क्षेत्रों में वितरण",
+      chartReportsSeries: "रिपोर्टें",
+
+      provenanceHeading: "डेटा स्रोत और गणितीय इंजन",
+      provenanceBody: "LokSanket एक पांच-कारकीय वस्तुनिष्ठ स्कोरिंग मॉडल पर कार्य करता है, जिसमें मांग की मात्रा (30%), गंभीरता (25%), रुझान गति (15%), भौगोलिक फैलाव (15%) और सत्यापित साक्ष्य (15%) शामिल हैं। प्राथमिकता स्कोर बिना किसी कृत्रिम अनुमान के पूरी तरह से एल्गोरिदम भार के माध्यम से तय किए जाते हैं।",
+      constituencyLabel: "निर्वाचन क्षेत्र:",
+      datasetLabel: "डेटासेट:",
+      publicOrientation: "सार्वजनिक अंतर्दृष्टि दृश्य · निर्णय-सहायता उन्मुखीकरण",
+      officialOrientation: "समीक्षा अधिकार सहित आधिकारिक कार्यक्षेत्र",
+
+      loadingSummary: "निर्वाचन क्षेत्र इंटेलिजेंस सारांश लोड हो रहा है...",
+      loadingSub: "सीधे MongoDB Atlas डेटा पर आधारित।",
+      loadError: "डैशबोर्ड डेटा लोड करने में असमर्थ",
+      retryBtn: "पुनः प्रयास करें",
+
+      recentReportsHeading: "हालिया नागरिक रिपोर्टें",
+      recentReportsSub: "Gemini द्वारा विश्लेषित नवीनतम नागरिक शिकायतें, जो क्लस्टरिंग से पहले और बाद की स्थिति दर्शाती हैं।",
+      recentReportsColCategory: "श्रेणी",
+      recentReportsColSubcategory: "उप-श्रेणी",
+      recentReportsColWard: "वार्ड / क्षेत्र",
+      recentReportsColTime: "प्राप्त समय",
+      recentReportsColSeverity: "गंभीरता",
+      recentReportsColStatus: "पाइपलाइन स्थिति",
+      statusAwaitingClustering: "क्लस्टरिंग की प्रतीक्षा",
+      statusClustered: "क्लस्टर में शामिल",
+      timeJustNow: "अभी-अभी",
+      timeMinutesAgo: (m: number) => `${m} मिनट पहले`,
+      timeHoursAgo: (h: number) => `${h} घंटे पहले`,
+      timeDaysAgo: (d: number) => `${d} दिन पहले`,
+      pipelineNotice: "नागरिक शिकायत → Gemini विश्लेषण → आवधिक क्लस्टरिंग की प्रतीक्षा अथवा प्राथमिकता समूह में शामिल।",
+      noRecentReports: "अभी तक कोई हालिया नागरिक रिपोर्ट दर्ज नहीं हुई है।",
+    },
   },
 };
+
+/**
+ * Civic category translation mapping for LokSanket.
+ * Preserves underlying database values while rendering localized labels.
+ */
+export const CATEGORY_TRANSLATIONS: Record<string, string> = {
+  "Road Infrastructure": "सड़क अवसंरचना",
+  "Drainage": "जल निकासी",
+  "Waste Management": "अपशिष्ट प्रबंधन",
+  "Electricity": "विद्युत",
+  "Electricity & Power": "विद्युत एवं ऊर्जा",
+  "Healthcare": "स्वास्थ्य सेवा",
+  "Water Supply & Sanitation": "जल आपूर्ति एवं स्वच्छता",
+  "Water Supply": "जल आपूर्ति",
+  "Sanitation": "स्वच्छता",
+  "Education": "शिक्षा",
+  "Public Transport": "सार्वजनिक परिवहन",
+  "Transport": "परिवहन",
+  "Street Lighting": "स्ट्रीट लाइटिंग",
+  "General Administration": "सामान्य प्रशासन",
+  "Public Administration": "लोक प्रशासन",
+  "Public Infrastructure": "सार्वजनिक अवसंरचना",
+};
+
+/**
+ * Returns the localized civic category name for display.
+ */
+export function formatCategoryName(category?: string, lang: Language = "en"): string {
+  if (!category) return "";
+  if (lang === "hi") {
+    return CATEGORY_TRANSLATIONS[category] || category;
+  }
+  return category;
+}
+
+/**
+ * Formats Ward / Sector / Area identifiers for display.
+ */
+export function formatWardDisplay(ward?: string, lang: Language = "en"): string {
+  if (!ward) return "";
+  if (lang === "hi") {
+    return ward
+      .replace(/\bWard\s*(\d+)\b/gi, "वार्ड $1")
+      .replace(/\bSector\s*(\d+)\b/gi, "सेक्टर $1")
+      .replace(/\bCentral\b/gi, "केंद्रीय");
+  }
+  return ward
+    .replace(/\bवार्ड\s*(\d+)\b/gi, "Ward $1")
+    .replace(/\bसेक्टर\s*(\d+)\b/gi, "Sector $1");
+}
+
+/**
+ * System-generated cluster title prefix mapping for seeded demonstration issues.
+ */
+export const CLUSTER_PREFIX_TRANSLATIONS: Record<string, string> = {
+  "Road Damage & Potholes": "सड़क क्षति एवं गड्ढे",
+  "Potholes / Road Damage": "सड़क क्षति एवं गड्ढे",
+  "Potholes & Road Damage": "सड़क क्षति एवं गड्ढे",
+  "Overflowing Open Drains": "उफनते खुले नाले",
+  "Unattended Garbage Dumps": "लावारिस कचरे के ढेर",
+  "Transformer Overload & Fluctuations": "ट्रांसफार्मर ओवरलोड एवं वोल्टेज उतार-चढ़ाव",
+  "Blocked Stormwater Drains": "अवरुद्ध बरसाती नाले",
+  "Primary Health Center Deficiencies": "प्राथमिक स्वास्थ्य केंद्र कमियां",
+  "Dispensary Medicine Shortage": "डिस्पेंसरी में दवाओं की कमी",
+  "Contaminated Drinking Water": "दूषित पेयजल",
+  "Drainage Overflow": "नाली का उफान",
+  "Government School Infrastructure": "सरकारी स्कूल अवसंरचना",
+  "Broken Drainage Lid": "टूटा नाली का ढक्कन",
+  "Classroom Shortage & Desks": "कक्षा व डेस्क की कमी",
+  "Sewage Overflow": "सीवेज उफान",
+  "Drainage Choke": "नाली जाम",
+  "Illegal Waste Burning": "अवैध कचरा जलाना",
+  "Bus Shelter & Route Irregularity": "बस शेल्टर एवं रूट अनियमितता",
+  "Public Toilet Hygiene & Maintenance": "सार्वजनिक शौचालय स्वच्छता एवं रखरखाव",
+  "Unscheduled Power Outages": "अघोषित बिजली कटौती",
+  "Damaged Electric Poles": "क्षतिग्रस्त बिजली के खंभे",
+  "Broken Pavement": "टूटा फुटपाथ",
+  "Garbage Dump": "कचरे का ढेर",
+  "Feeder Bus Shortage": "फीडर बस की कमी",
+  "School Gate Lock Issue": "स्कूल गेट लॉक समस्या",
+  "Pipeline Leakage & Wastage": "पाइपलाइन लीकेज एवं बर्बादी",
+  "Streetlight Non-functional": "खराब स्ट्रीट लाइटें",
+  "Street Light Non-Functional": "खराब स्ट्रीट लाइटें",
+  "Non-functional Street Lights": "खराब स्ट्रीट लाइटें",
+  "Fused Street Light": "फ्यूज स्ट्रीट लाइट",
+  "Bus Stop Bench Missing": "बस स्टॉप बेंच गायब",
+  "Scattered Debris": "बिखरा हुआ मलबा",
+  "Low Water Pressure": "कम पानी का दबाव",
+  "Test Issue": "परीक्षण समस्या",
+  "Clogged Gutter": "जाम गटर",
+  "System Test": "सिस्टम परीक्षण",
+  "General Infrastructure": "सामान्य अवसंरचना",
+  "Pavement Cracks": "फुटपाथ की दरारें",
+  "Irregular Door-to-Door Collection": "अनियमित घर-घर कचरा उठाव",
+  "Minor Surface Erosion": "सड़क की हल्की सतह का कटाव",
+  "Dispensary Timings Inquiry": "डिस्पेंसरी समय पूछताछ",
+  "Billing Meter Fluctuations": "बिलिंग मीटर उतार-चढ़ाव",
+  "Power Fluctuations": "विद्युत उतार-चढ़ाव",
+};
+
+/**
+ * Returns the localized issue cluster title for UI display without mutating database records.
+ */
+export function formatClusterTitleDisplay(title?: string, lang: Language = "en"): string {
+  if (!title) return "";
+  if (lang === "hi") {
+    const parts = title.split(/\s+[—–-]\s+/);
+    if (parts.length === 2) {
+      const prefix = parts[0].trim();
+      const suffix = parts[1].trim();
+      const hindiPrefix = CLUSTER_PREFIX_TRANSLATIONS[prefix] || prefix;
+      const hindiSuffix = formatWardDisplay(suffix, "hi");
+      return `${hindiPrefix} — ${hindiSuffix}`;
+    }
+    return CLUSTER_PREFIX_TRANSLATIONS[title] || title;
+  }
+  return title;
+}
+
+/**
+ * Returns localized subcategory name if known, else original string.
+ */
+export function formatSubcategoryName(sub?: string, lang: Language = "en"): string {
+  if (!sub) return "";
+  if (lang === "hi") {
+    if (CLUSTER_PREFIX_TRANSLATIONS[sub]) {
+      return CLUSTER_PREFIX_TRANSLATIONS[sub];
+    }
+    const lowerSub = sub.toLowerCase().trim();
+    for (const [key, val] of Object.entries(CLUSTER_PREFIX_TRANSLATIONS)) {
+      if (key.toLowerCase().trim() === lowerSub) {
+        return val;
+      }
+    }
+    return sub;
+  }
+  return sub;
+}
+
+/**
+ * Formats relative timestamp cleanly for public citizen transparency.
+ */
+export function formatRelativeTime(
+  dateInput: string | Date,
+  lang: Language = "en"
+): string {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const now = new Date();
+  const diffMs = Math.max(0, now.getTime() - date.getTime());
+  const diffMinutes = Math.floor(diffMs / (60 * 1000));
+  const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+
+  if (lang === "hi") {
+    if (diffMinutes < 1) return "अभी-अभी";
+    if (diffMinutes < 60) return `${diffMinutes} मिनट पहले`;
+    if (diffHours < 24) return `${diffHours} घंटे पहले`;
+    return `${diffDays} दिन पहले`;
+  } else {
+    if (diffMinutes < 1) return "Just now";
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  }
+}
+
+

@@ -93,6 +93,45 @@ export function extractWard(location?: string, rawText?: string): string {
 }
 
 /**
+ * Safely sanitizes citizen location input into a non-sensitive ward or neighborhood identifier.
+ * Prevents exposing full street addresses, house numbers, or private details.
+ */
+export function sanitizeLocality(location?: string, rawText?: string): string {
+  const combined = `${location || ""} ${rawText || ""}`;
+
+  // 1. Check for explicit Ward or Sector pattern
+  const wardMatch = combined.match(/\b(?:Ward|वार्ड)[-\s]*(\d+)\b/i);
+  if (wardMatch && wardMatch[1]) {
+    return `Ward ${wardMatch[1]}`;
+  }
+
+  const sectorMatch = combined.match(/\b(?:Sector|सेक्टर)[-\s]*(\d+)\b/i);
+  if (sectorMatch && sectorMatch[1]) {
+    return `Sector ${sectorMatch[1]}`;
+  }
+
+  if (!location || !location.trim()) {
+    return "Constituency Area";
+  }
+
+  // 2. If it's a multi-part address, pick the neighborhood / locality segment,
+  // discarding house/flat numbers, building names, and city
+  const parts = location.split(",").map((p) => p.trim()).filter(Boolean);
+
+  for (const part of parts) {
+    if (/^(?:[A-Za-z]?\s*\d+|h(?:ouse)?\.?\s*no|flat|plot|door)\b/i.test(part)) continue;
+    if (/sadan|niwas|apartment|heights|villa|enclave/i.test(part) && parts.length > 2) continue;
+    if (part.length >= 3 && !/^\d{5,6}$/.test(part)) {
+      return part
+        .toLowerCase()
+        .replace(/\b[a-z]/g, (c) => c.toUpperCase());
+    }
+  }
+
+  return "Constituency Area";
+}
+
+/**
  * Normalizes string keys for stable canonical grouping.
  */
 function normalizeString(str?: string): string {

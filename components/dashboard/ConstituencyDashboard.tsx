@@ -5,6 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { useLanguage } from "@/context/LanguageContext";
+import {
+  formatCategoryName,
+  formatClusterTitleDisplay,
+  formatWardDisplay,
+  formatSubcategoryName,
+  formatRelativeTime,
+} from "@/lib/i18n";
 import {
   AlertTriangle,
   TrendingUp,
@@ -76,6 +84,16 @@ interface IssueClusterItem {
   createdAt: string;
 }
 
+interface RecentReportItem {
+  _id: string;
+  category: string;
+  subcategory: string;
+  severity: string;
+  location: string;
+  createdAt: string;
+  clusterId: string | null;
+}
+
 interface DashboardData {
   kpis: {
     totalReports: number;
@@ -89,6 +107,7 @@ interface DashboardData {
   categoryDistribution: { category: string; count: number }[];
   trendTimeline: { date: string; count: number }[];
   topClusters: IssueClusterItem[];
+  recentReports?: RecentReportItem[];
   datasetInfo: {
     isSynthetic: boolean;
     label: string;
@@ -103,6 +122,9 @@ interface ConstituencyDashboardProps {
 
 export default function ConstituencyDashboard({ mode }: ConstituencyDashboardProps) {
   const router = useRouter();
+  const { t, language } = useLanguage();
+  const td = t.dashboard;
+
   const [data, setData] = useState<DashboardData | null>(null);
   const [allClusters, setAllClusters] = useState<IssueClusterItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -236,6 +258,33 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
     }
   };
 
+  const getSeverityBadge = (severity: string) => {
+    const s = severity?.toLowerCase();
+    switch (s) {
+      case "critical":
+        return {
+          label: language === "hi" ? "गंभीर" : "Critical",
+          className: "bg-rose-100 text-rose-800 border-rose-300 font-bold",
+        };
+      case "high":
+        return {
+          label: td.levelHigh,
+          className: "bg-rose-50 text-rose-700 border-rose-200 font-bold",
+        };
+      case "medium":
+        return {
+          label: td.levelMedium,
+          className: "bg-amber-50 text-amber-700 border-amber-300 font-semibold",
+        };
+      case "low":
+      default:
+        return {
+          label: td.levelLow,
+          className: "bg-slate-100 text-slate-700 border-slate-200 font-medium",
+        };
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
       <Navbar />
@@ -290,23 +339,23 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
         <main className="flex-1 max-w-7xl mx-auto px-4 py-20 text-center">
           <div className="w-8 h-8 border-3 border-indigo-700 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <h2 className="text-sm font-semibold text-slate-700">
-            Loading Constituency Intelligence Summary...
+            {td.loadingSummary}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Grounded directly in MongoDB Atlas data.
+            {td.loadingSub}
           </p>
         </main>
       ) : error ? (
         <main className="flex-1 max-w-7xl mx-auto px-4 py-16 text-center">
           <div className="inline-block p-6 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm max-w-md mx-auto space-y-3">
             <AlertTriangle className="w-6 h-6 mx-auto text-rose-600" />
-            <p className="font-bold">Unable to load dashboard data</p>
+            <p className="font-bold">{td.loadError}</p>
             <p className="text-xs text-rose-700">{error}</p>
             <button
               onClick={reloadData}
               className="px-4 py-1.5 bg-rose-700 text-white rounded text-xs font-semibold hover:bg-rose-800 cursor-pointer"
             >
-              Retry
+              {td.retryBtn}
             </button>
           </div>
         </main>
@@ -316,24 +365,22 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-5">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                <span>{isOfficial ? "Official Governance Workspace" : "Constituency Decision Support"}</span>
+                <span>{isOfficial ? td.workspaceSubtitleOfficial : td.workspaceSubtitlePublic}</span>
                 <span>·</span>
                 <span className="text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200 text-[10px]">
-                  Realistic Demonstration Data
+                  {td.demoBadge}
                 </span>
                 {!isOfficial && (
                   <span className="text-slate-600 bg-slate-200/80 px-1.5 py-0.2 rounded text-[10px]">
-                    Public Read-Only
+                    {td.publicReadOnly}
                   </span>
                 )}
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                {isOfficial ? "Official Priority & Review Dashboard" : "Development Intelligence Dashboard"}
+                {isOfficial ? td.titleOfficial : td.titlePublic}
               </h1>
               <p className="text-xs text-slate-500 mt-1">
-                {isOfficial
-                  ? "Operational workspace for reviewing AI priorities, recording official human decisions, and synthesizing evidence briefs."
-                  : "Aggregated civic demand volume, severity mapping, recent trends and ground evidence."}
+                {isOfficial ? td.subtitleOfficial : td.subtitlePublic}
               </p>
             </div>
 
@@ -346,7 +393,7 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                   title="Generate evidence-backed constituency development brief"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Development Brief</span>
+                  <span>{td.briefsBtn}</span>
                 </Link>
               )}
 
@@ -361,7 +408,7 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                   <RefreshCw
                     className={`w-3.5 h-3.5 ${isRebuilding ? "animate-spin" : ""}`}
                   />
-                  <span className="hidden sm:inline">Recalculate Priorities</span>
+                  <span className="hidden sm:inline">{td.recalculateBtn}</span>
                 </button>
               )}
 
@@ -373,7 +420,7 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                   title="Access Official Review Workspace (Demo)"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-indigo-700" />
-                  <span>Official Review (Demo)</span>
+                  <span>{td.officialReviewBtn}</span>
                 </Link>
               )}
 
@@ -382,7 +429,7 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                 href="/report"
                 className="text-xs px-3 py-1.5 rounded bg-indigo-700 hover:bg-indigo-800 text-white font-semibold transition-colors flex items-center gap-1"
               >
-                <span>+ Report Issue</span>
+                <span>{td.reportIssueBtn}</span>
                 <ExternalLink className="w-3 h-3" />
               </Link>
             </div>
@@ -392,53 +439,53 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs">
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                <span>Total Reports</span>
+                <span>{td.kpiTotalReports}</span>
                 <FileText className="w-4 h-4 text-slate-400" />
               </div>
               <div className="text-3xl font-black text-slate-900 tracking-tight mt-1.5">
                 {data.kpis?.totalReports?.toLocaleString() ?? 0}
               </div>
               <div className="text-xs text-slate-500 mt-1">
-                Across {data.categoryDistribution?.length ?? 9} civic categories
+                {td.kpiAcrossCategories(data.categoryDistribution?.length ?? 9)}
               </div>
             </div>
 
             <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs">
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                <span>High-Priority Issues</span>
+                <span>{td.kpiHighPriority}</span>
                 <AlertTriangle className="w-4 h-4 text-rose-600" />
               </div>
               <div className="text-3xl font-black text-rose-700 tracking-tight mt-1.5">
                 {data.kpis?.highPriorityCount ?? 0}
               </div>
               <div className="text-xs text-slate-500 mt-1">
-                Score &ge; 70.0 based on 5 deterministic factors
+                {td.kpiHighPrioritySub}
               </div>
             </div>
 
             <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs">
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                <span>Medium Priority</span>
+                <span>{td.kpiMediumPriority}</span>
                 <SlidersHorizontal className="w-4 h-4 text-amber-600" />
               </div>
               <div className="text-3xl font-black text-amber-700 tracking-tight mt-1.5">
                 {data.kpis?.mediumPriorityCount ?? 0}
               </div>
               <div className="text-xs text-slate-500 mt-1">
-                Score between 40.0 and 69.9
+                {td.kpiMediumPrioritySub}
               </div>
             </div>
 
             <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs">
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                <span>Affected Localities</span>
+                <span>{td.kpiAffectedLocalities}</span>
                 <MapPin className="w-4 h-4 text-slate-400" />
               </div>
               <div className="text-3xl font-black text-slate-900 tracking-tight mt-1.5">
                 {data.kpis?.affectedLocalitiesCount ?? 0}
               </div>
               <div className="text-xs text-slate-500 mt-1">
-                Distinct geographic zones reporting issues
+                {td.kpiAffectedLocalitiesSub}
               </div>
             </div>
           </section>
@@ -448,12 +495,10 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                  Prioritized Constituency Issues
+                  {td.tableHeading}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  {isOfficial
-                    ? "Review deterministic AI recommendations and record official governance decisions."
-                    : "Ranked transparently by demand volume, severity, trend velocity, geographic spread, and photo evidence."}
+                  {isOfficial ? td.tableSubOfficial : td.tableSubPublic}
                 </p>
               </div>
 
@@ -465,10 +510,10 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                   onChange={(e) => setSelectedLevel(e.target.value)}
                   className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs"
                 >
-                  <option value="all">All Priorities</option>
-                  <option value="High">High Priority Only</option>
-                  <option value="Medium">Medium Priority Only</option>
-                  <option value="Low">Low Priority Only</option>
+                  <option value="all">{td.filterAllPriorities}</option>
+                  <option value="High">{td.filterHighOnly}</option>
+                  <option value="Medium">{td.filterMediumOnly}</option>
+                  <option value="Low">{td.filterLowOnly}</option>
                 </select>
 
                 {/* Category filter */}
@@ -477,10 +522,10 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs"
                 >
-                  <option value="all">All Categories</option>
+                  <option value="all">{td.filterAllCategories}</option>
                   {uniqueCategories.map((cat) => (
                     <option key={cat} value={cat}>
-                      {cat}
+                      {formatCategoryName(cat, language)}
                     </option>
                   ))}
                 </select>
@@ -492,15 +537,15 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
               <table className="w-full text-left text-xs text-slate-700">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold uppercase text-slate-500 tracking-wider">
-                    <th className="py-2.5 px-3">Issue Cluster</th>
-                    <th className="py-2.5 px-3">Category</th>
-                    <th className="py-2.5 px-3">Wards / Localities</th>
-                    <th className="py-2.5 px-3 text-right">Reports</th>
-                    <th className="py-2.5 px-3 text-right">Trend</th>
-                    <th className="py-2.5 px-3">Evidence</th>
-                    <th className="py-2.5 px-3 text-right">Priority Score</th>
-                    {isOfficial && <th className="py-2.5 px-3">Official Decision</th>}
-                    <th className="py-2.5 px-3 text-right">Action</th>
+                    <th className="py-2.5 px-3">{td.colIssueCluster}</th>
+                    <th className="py-2.5 px-3">{td.colCategory}</th>
+                    <th className="py-2.5 px-3">{td.colWardsLocalities}</th>
+                    <th className="py-2.5 px-3 text-right">{td.colReports}</th>
+                    <th className="py-2.5 px-3 text-right">{td.colTrend}</th>
+                    <th className="py-2.5 px-3">{td.colEvidence}</th>
+                    <th className="py-2.5 px-3 text-right">{td.colPriorityScore}</th>
+                    {isOfficial && <th className="py-2.5 px-3">{td.colOfficialDecision}</th>}
+                    <th className="py-2.5 px-3 text-right">{td.colAction}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -510,7 +555,7 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                         colSpan={isOfficial ? 9 : 8}
                         className="py-8 text-center text-slate-400 text-xs italic"
                       >
-                        No issues match the selected filter.
+                        {td.noIssuesMatch}
                       </td>
                     </tr>
                   ) : (
@@ -532,14 +577,14 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                               href={detailHref}
                               className="hover:text-indigo-700 transition-colors block line-clamp-2"
                             >
-                              {cluster.title}
+                              {formatClusterTitleDisplay(cluster.title, language)}
                             </Link>
                           </td>
 
                           {/* Category */}
                           <td className="py-3 px-3 whitespace-nowrap">
                             <span className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200">
-                              {cluster.category}
+                              {formatCategoryName(cluster.category, language)}
                             </span>
                           </td>
 
@@ -549,11 +594,15 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                               <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                               <span className="truncate">
                                 {cluster.evidence?.localities?.length
-                                  ? cluster.evidence.localities.slice(0, 2).join(", ") +
+                                  ? cluster.evidence.localities
+                                      .slice(0, 2)
+                                      .map((loc) => formatWardDisplay(loc, language))
+                                      .join(", ") +
                                     (cluster.evidence.localities.length > 2
                                       ? ` +${cluster.evidence.localities.length - 2}`
                                       : "")
-                                  : cluster.wardIds?.join(", ") || "Central"}
+                                  : cluster.wardIds?.map((w) => formatWardDisplay(w, language)).join(", ") ||
+                                    (language === "hi" ? "केंद्रीय" : "Central")}
                               </span>
                             </div>
                           </td>
@@ -584,11 +633,11 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                               {cluster.evidence?.photoEvidenceCount > 0 ? (
                                 <span className="inline-flex items-center gap-1 text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                                   <Camera className="w-3 h-3 text-blue-600" />
-                                  {cluster.evidence.photoEvidenceCount} photos
+                                  {td.evidencePhotos(cluster.evidence.photoEvidenceCount)}
                                 </span>
                               ) : (
                                 <span className="text-slate-400 italic">
-                                  Text reports
+                                  {td.evidenceTextOnly}
                                 </span>
                               )}
                             </div>
@@ -605,7 +654,11 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                                   cluster.priorityLevel
                                 )}`}
                               >
-                                {cluster.priorityLevel}
+                                {cluster.priorityLevel === "High"
+                                  ? td.levelHigh
+                                  : cluster.priorityLevel === "Medium"
+                                  ? td.levelMedium
+                                  : td.levelLow}
                               </span>
                             </div>
                           </td>
@@ -627,15 +680,23 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                                   {cluster.review.decision === "adjust" && <Sliders className="w-3 h-3 text-blue-600" />}
                                   {cluster.review.decision === "reject" && <XCircle className="w-3 h-3 text-rose-600" />}
                                   {cluster.review.decision === "adjust"
-                                    ? `ADJUSTED → ${cluster.review.adjustedPriorityLevel?.toUpperCase()}`
+                                    ? `${td.decisionAdjusted} → ${(
+                                        cluster.review.adjustedPriorityLevel === "high"
+                                          ? td.levelHigh
+                                          : cluster.review.adjustedPriorityLevel === "medium"
+                                          ? td.levelMedium
+                                          : cluster.review.adjustedPriorityLevel === "low"
+                                          ? td.levelLow
+                                          : cluster.review.adjustedPriorityLevel || ""
+                                      ).toUpperCase()}`
                                     : cluster.review.decision === "accept"
-                                    ? "ACCEPTED"
-                                    : "REJECTED"}
+                                    ? td.decisionAccepted
+                                    : td.decisionRejected}
                                 </span>
                               ) : (
                                 <span className="text-[10px] font-medium text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1">
                                   <Clock className="w-3 h-3 text-amber-600" />
-                                  PENDING
+                                  {td.decisionPending}
                                 </span>
                               )}
                             </td>
@@ -651,7 +712,7 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                                   : "bg-slate-100 hover:bg-slate-200 text-slate-800"
                               }`}
                             >
-                              <span>{isOfficial ? "Review & Action" : "View Evidence"}</span>
+                              <span>{isOfficial ? td.reviewAndAction : td.viewEvidence}</span>
                               <ChevronRight className="w-3 h-3" />
                             </Link>
                           </td>
@@ -667,7 +728,7 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
             {filteredClusters.length > 5 && (
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-500">
-                  Showing {displayedClusters.length} of {filteredClusters.length} issues
+                  {td.showingCount(displayedClusters.length, filteredClusters.length)}
                 </span>
                 <button
                   type="button"
@@ -675,8 +736,8 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                   className="font-bold text-indigo-700 hover:text-indigo-800 cursor-pointer"
                 >
                   {showAllClusters
-                    ? "Show Top 5 Only ↑"
-                    : `View all ${filteredClusters.length} issues →`}
+                    ? td.showTop5Only
+                    : td.viewAllIssues(filteredClusters.length)}
                 </button>
               </div>
             )}
@@ -685,17 +746,143 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
             {!isOfficial && (
               <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
                 <p>
-                  Official review decisions and priority adjustments are managed through the Official Review workflow.
+                  {td.publicFootnoteNotice}
                 </p>
                 <Link
                   href="/official/access"
                   className="font-semibold text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Official Review (Demo) →</span>
+                  <span>{td.publicFootnoteLink}</span>
                 </Link>
               </div>
             )}
+          </section>
+
+          {/* Recent Citizen Reports Section (Public Real-Time Ingestion Stream) */}
+          <section className="bg-white rounded-lg border border-slate-200 shadow-2xs p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                    {td.recentReportsHeading}
+                  </h2>
+                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 uppercase tracking-wider">
+                    {language === "hi" ? "लाइव इनटेक" : "Live Intake"}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {td.recentReportsSub}
+                </p>
+              </div>
+
+              {/* Pipeline Step Tag */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-50 border border-slate-200 text-[11px] text-slate-600">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span className="font-medium">
+                  {language === "hi"
+                    ? "नागरिक इनपुट → जेमिनी विश्लेषण → क्लस्टरिंग"
+                    : "Citizen Intake → Gemini → Clustering"}
+                </span>
+              </div>
+            </div>
+
+            {/* Recent Reports Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold uppercase text-slate-500 tracking-wider">
+                    <th className="py-2.5 px-3">{td.recentReportsColCategory}</th>
+                    <th className="py-2.5 px-3">{td.recentReportsColSubcategory}</th>
+                    <th className="py-2.5 px-3">{td.recentReportsColWard}</th>
+                    <th className="py-2.5 px-3">{td.recentReportsColTime}</th>
+                    <th className="py-2.5 px-3">{td.recentReportsColSeverity}</th>
+                    <th className="py-2.5 px-3 text-right">{td.recentReportsColStatus}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {(!data.recentReports || data.recentReports.length === 0) ? (
+                    <tr>
+                      <td colSpan={6} className="py-6 text-center text-slate-400 italic">
+                        {td.noRecentReports}
+                      </td>
+                    </tr>
+                  ) : (
+                    data.recentReports.map((report) => {
+                      const sev = getSeverityBadge(report.severity);
+                      const isAwaiting = !report.clusterId;
+
+                      return (
+                        <tr key={report._id} className="hover:bg-slate-50/80 transition-colors">
+                          {/* Category */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200">
+                              {formatCategoryName(report.category, language)}
+                            </span>
+                          </td>
+
+                          {/* Subcategory */}
+                          <td className="py-3 px-3 font-semibold text-slate-900 whitespace-nowrap">
+                            {formatSubcategoryName(report.subcategory, language)}
+                          </td>
+
+                          {/* Ward / Locality (Sanitized, non-sensitive) */}
+                          <td className="py-3 px-3 whitespace-nowrap text-slate-600">
+                            <div className="flex items-center gap-1 text-[11px]">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>{formatWardDisplay(report.location, language)}</span>
+                            </div>
+                          </td>
+
+                          {/* Received Time */}
+                          <td className="py-3 px-3 whitespace-nowrap text-slate-500">
+                            <div className="flex items-center gap-1 text-[11px]">
+                              <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>{formatRelativeTime(report.createdAt, language)}</span>
+                            </div>
+                          </td>
+
+                          {/* Severity */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className={`text-[10px] px-2 py-0.2 rounded border ${sev.className}`}>
+                              {sev.label}
+                            </span>
+                          </td>
+
+                          {/* Pipeline Status */}
+                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                            {isAwaiting ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                <span>{td.statusAwaitingClustering}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>{td.statusClustered}</span>
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pipeline Notice */}
+            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span className="italic">{td.pipelineNotice}</span>
+              <Link
+                href="/report"
+                className="font-semibold text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1"
+              >
+                <span>{td.reportIssueBtn}</span>
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
           </section>
 
           {/* Analytical Charts: Trend & Category Distribution */}
@@ -704,11 +891,11 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
             <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs space-y-3">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Grievance Ingestion Trend (Last 28 Days)</span>
+                  <span>{td.chartTrendHeading}</span>
                   <TrendingUp className="w-4 h-4 text-slate-400" />
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Daily complaint filings identifying active surges
+                  {td.chartTrendSub}
                 </p>
               </div>
 
@@ -741,7 +928,7 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                       stroke="#4F46E5"
                       strokeWidth={2}
                       fill="#EEF2FF"
-                      name="Reports"
+                      name={td.chartReportsSeries}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -752,28 +939,31 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
             <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs space-y-3">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center justify-between">
-                  <span>Category Distribution</span>
+                  <span>{td.chartCategoryHeading}</span>
                   <Layers className="w-4 h-4 text-slate-400" />
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Breakdown across civic service domains
+                  {td.chartCategorySub}
                 </p>
               </div>
 
               <div className="h-56 w-full pt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={data.categoryDistribution || []}
+                    data={(data.categoryDistribution || []).map((item) => ({
+                      ...item,
+                      displayCategory: formatCategoryName(item.category, language),
+                    }))}
                     layout="vertical"
-                    margin={{ top: 5, right: 20, left: 40, bottom: 5 }}
+                    margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                     <XAxis type="number" tick={{ fontSize: 10, fill: "#64748B" }} />
                     <YAxis
-                      dataKey="category"
+                      dataKey="displayCategory"
                       type="category"
                       tick={{ fontSize: 10, fill: "#334155" }}
-                      width={80}
+                      width={language === "hi" ? 115 : 85}
                     />
                     <Tooltip
                       contentStyle={{
@@ -783,7 +973,7 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                         fontSize: "11px",
                       }}
                     />
-                    <Bar dataKey="count" fill="#3B82F6" radius={[0, 4, 4, 0]} name="Reports" />
+                    <Bar dataKey="count" fill="#3B82F6" radius={[0, 4, 4, 0]} name={td.chartReportsSeries} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -794,20 +984,28 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
           <section className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs text-xs space-y-2">
             <div className="flex items-center gap-2 text-slate-900 font-bold uppercase tracking-wider text-[11px]">
               <Layers className="w-3.5 h-3.5 text-indigo-700" />
-              <span>Data Provenance &amp; Mathematical Engine</span>
+              <span>{td.provenanceHeading}</span>
             </div>
             <p className="text-slate-600 leading-relaxed">
-              LokSanket operates on a five-factor deterministic scoring model combining Demand Volume (30%), Severity (25%), Trend Velocity (15%), Geographic Spread (15%), and Verified Evidence (15%). Priority scores are computed strictly through algorithmic weights rather than generative estimates.
+              {td.provenanceBody}
             </p>
             <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
-              <span>Constituency: {data.datasetInfo?.constituency || "Ward 1–25"}</span>
+              <span>
+                {td.constituencyLabel}{" "}
+                {language === "hi"
+                  ? "केंद्रीय प्रदर्शन निर्वाचन क्षेत्र (वार्ड 1–25)"
+                  : data.datasetInfo?.constituency || "Central Demonstration Constituency (Ward 1–25)"}
+              </span>
               <span>·</span>
-              <span>Dataset: {data.datasetInfo?.label || "Realistic Demonstration Data"}</span>
+              <span>
+                {td.datasetLabel}{" "}
+                {language === "hi" ? td.demoBadge : data.datasetInfo?.label || td.demoBadge}
+              </span>
               <span>·</span>
               <span>
                 {isOfficial
-                  ? "Official workspace with review authority"
-                  : "Public insights view · Decision-support orientation"}
+                  ? td.officialOrientation
+                  : td.publicOrientation}
               </span>
             </div>
           </section>

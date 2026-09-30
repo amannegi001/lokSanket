@@ -3,12 +3,13 @@ import { connectDB } from "@/lib/db";
 import { Complaint } from "@/models/Complaint";
 import { IssueCluster } from "@/models/IssueCluster";
 import { Review } from "@/models/Review";
+import { sanitizeLocality } from "@/lib/clustering";
 
 export async function GET() {
   try {
     await connectDB();
 
-    // 1. Fetch high-level KPIs, cluster summary, and canonical reviews from MongoDB
+    // 1. Fetch high-level KPIs, cluster summary, recent reports, and canonical reviews from MongoDB
     const [
       totalReports,
       clusters,
@@ -17,6 +18,7 @@ export async function GET() {
       reportsThisMonth,
       categoryAgg,
       timelineAgg,
+      recentComplaints,
     ] = await Promise.all([
       // A. Total complaint documents
       Complaint.countDocuments(),
@@ -69,7 +71,25 @@ export async function GET() {
         },
         { $sort: { _id: 1 } },
       ]),
+
+      // G. Latest 5 complaints for Recent Citizen Reports
+      Complaint.find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("category subcategory severity location createdAt clusterId")
+        .lean(),
     ]);
+
+    // Format recent citizen reports safely without exposing full addresses or raw text
+    const recentReports = (recentComplaints || []).map((c) => ({
+      _id: c._id.toString(),
+      category: c.category || "General Civic Issue",
+      subcategory: c.subcategory || "General Grievance",
+      severity: c.severity || "medium",
+      location: sanitizeLocality(c.location),
+      createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
+      clusterId: c.clusterId ? c.clusterId.toString() : null,
+    }));
 
     // Priority level counts derived directly from stored clusters
     const highPriorityCount = clusters.filter(
@@ -170,6 +190,7 @@ export async function GET() {
         trendTimeline,
         topClusters: clustersWithReviews.slice(0, 10),
         clusters: clustersWithReviews, // Full set of sorted clusters for instant frontend filtering
+        recentReports,
         datasetInfo: {
           isSynthetic: true,
           label: "Realistic Demonstration Data",
