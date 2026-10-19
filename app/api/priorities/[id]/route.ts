@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/db";
 import { IssueCluster } from "@/models/IssueCluster";
 import { Complaint } from "@/models/Complaint";
 import { Review } from "@/models/Review";
-import { PRIORITY_CONFIG } from "@/lib/priority";
+import { PRIORITY_CONFIG, classifyPriority } from "@/lib/priority";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -164,6 +164,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const responseCluster = {
       ...cluster,
+      priorityLevel: classifyPriority(cluster.priorityScore, { safe: true, fallback: cluster.priorityLevel || "Low" }),
       review: canonicalReview,
       officialDecision: canonicalReview
         ? canonicalReview.decision === "accept"

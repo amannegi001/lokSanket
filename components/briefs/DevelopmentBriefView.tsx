@@ -18,6 +18,7 @@ import {
   Info,
   Clock,
 } from "lucide-react";
+import { classifyPriority } from "@/lib/priority";
 
 interface PriorityItem {
   id: string;
@@ -348,17 +349,32 @@ export default function DevelopmentBriefView({ mode }: DevelopmentBriefViewProps
                               #{idx + 1}
                             </span>
 
-                            <span
-                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
-                                item.priorityLevel === "High"
-                                  ? "bg-rose-50 text-rose-700 border-rose-300"
-                                  : item.priorityLevel === "Medium"
-                                  ? "bg-amber-50 text-amber-700 border-amber-300"
-                                  : "bg-slate-100 text-slate-700 border-slate-300"
-                              }`}
-                            >
-                              {item.priorityLevel} Priority
-                            </span>
+                            {(() => {
+                              const level = classifyPriority(item.priorityScore, {
+                                safe: true,
+                                fallback: item.priorityLevel || "Low",
+                              });
+                              return (
+                                <span
+                                  title={
+                                    level === "High"
+                                      ? "High Priority: Score ≥ 80 based on 5 deterministic factors"
+                                      : level === "Medium"
+                                      ? "Medium Priority: Score 60–79.9"
+                                      : "Low Priority: Score below 60"
+                                  }
+                                  className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                    level === "High"
+                                      ? "bg-rose-50 text-rose-700 border-rose-300"
+                                      : level === "Medium"
+                                      ? "bg-amber-50 text-amber-700 border-amber-300"
+                                      : "bg-slate-100 text-slate-700 border-slate-300"
+                                  }`}
+                                >
+                                  {level} Priority
+                                </span>
+                              );
+                            })()}
 
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
                               {item.category}

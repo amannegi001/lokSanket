@@ -10,7 +10,7 @@ try {
 
 import { Complaint } from "../models/Complaint";
 import { IssueCluster } from "../models/IssueCluster";
-import { rebuildIssueClusters } from "../lib/clustering";
+import { rebuildIssueClusters } from "../lib/clustering-persistence";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 

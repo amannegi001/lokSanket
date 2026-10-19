@@ -22,6 +22,7 @@ import {
   Check,
   Info,
 } from "lucide-react";
+import { classifyPriority } from "@/lib/priority";
 
 interface SeverityBreakdown {
   low: number;
@@ -310,6 +311,10 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
   }
 
   const ev = cluster.evidence;
+  const aiPriorityLevel = classifyPriority(cluster.priorityScore, {
+    safe: true,
+    fallback: cluster.priorityLevel || "Low",
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
@@ -368,15 +373,22 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span
+                  title={
+                    aiPriorityLevel === "High"
+                      ? "High Priority: Score ≥ 80 based on 5 deterministic factors"
+                      : aiPriorityLevel === "Medium"
+                      ? "Medium Priority: Score 60–79.9"
+                      : "Low Priority: Score below 60"
+                  }
                   className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase tracking-wider border ${
-                    cluster.priorityLevel === "High"
+                    aiPriorityLevel === "High"
                       ? "bg-rose-50 text-rose-700 border-rose-300"
-                      : cluster.priorityLevel === "Medium"
+                      : aiPriorityLevel === "Medium"
                       ? "bg-amber-50 text-amber-700 border-amber-300"
                       : "bg-slate-100 text-slate-700 border-slate-300"
                   }`}
                 >
-                  {cluster.priorityLevel} Priority
+                  {aiPriorityLevel} Priority
                 </span>
 
                 {persistedReview && persistedReview.decision ? (
@@ -419,7 +431,7 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
               </h1>
 
               <p className="text-xs text-slate-500">
-                LokSanket identifies this as a <strong>{cluster.priorityLevel.toLowerCase()}-priority issue</strong> based on available civic evidence.
+                LokSanket identifies this as a <strong>{aiPriorityLevel.toLowerCase()}-priority issue</strong> based on available civic evidence.
               </p>
             </div>
 
@@ -467,14 +479,14 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
                 </span>
                 <span
                   className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded border ${
-                    cluster.priorityLevel === "High"
+                    aiPriorityLevel === "High"
                       ? "bg-rose-50 text-rose-700 border-rose-300"
-                      : cluster.priorityLevel === "Medium"
+                      : aiPriorityLevel === "Medium"
                       ? "bg-amber-50 text-amber-700 border-amber-300"
                       : "bg-slate-100 text-slate-700 border-slate-300"
                   }`}
                 >
-                  {cluster.priorityLevel} Priority
+                  {aiPriorityLevel} Priority
                 </span>
               </div>
 
@@ -486,7 +498,7 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                LokSanket identifies this as a <strong>{cluster.priorityLevel.toLowerCase()}-priority issue</strong> based on the available evidence ({cluster.reportCount} citizen reports across {cluster.evidence?.affectedLocalities || 1} localities).
+                LokSanket identifies this as a <strong>{aiPriorityLevel.toLowerCase()}-priority issue</strong> based on the available evidence ({cluster.reportCount} citizen reports across {cluster.evidence?.affectedLocalities || 1} localities).
               </p>
 
               <div className="text-[11px] text-slate-400 border-t border-slate-200/60 pt-2">
@@ -542,12 +554,12 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
                   <div className="text-xs text-slate-700 leading-relaxed">
                     {persistedReview.decision === "accept" && (
                       <span>
-                        AI recommendation of <strong>{cluster.priorityLevel} Priority</strong> was officially accepted and confirmed for municipal response.
+                        AI recommendation of <strong>{aiPriorityLevel} Priority</strong> was officially accepted and confirmed for municipal response.
                       </span>
                     )}
                     {persistedReview.decision === "adjust" && (
                       <span>
-                        Operational priority adjusted from {cluster.priorityLevel} to <strong className="capitalize">{persistedReview.adjustedPriorityLevel} Priority</strong>. Original deterministic AI score ({cluster.priorityScore.toFixed(1)}) remains unchanged.
+                        Operational priority adjusted from {aiPriorityLevel} to <strong className="capitalize">{persistedReview.adjustedPriorityLevel} Priority</strong>. Original deterministic AI score ({cluster.priorityScore.toFixed(1)}) remains unchanged.
                       </span>
                     )}
                     {persistedReview.decision === "reject" && (
@@ -660,7 +672,7 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
                       )}
                     </div>
                     <p className="text-[11px] text-slate-500 leading-tight">
-                      Endorse AI recommendation as <strong>{cluster.priorityLevel} Priority</strong> for departmental action.
+                      Endorse AI recommendation as <strong>{aiPriorityLevel} Priority</strong> for departmental action.
                     </p>
                   </button>
 
@@ -722,7 +734,7 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
                       Select Adjusted Priority Level
                     </label>
                     <span className="text-[11px] text-slate-500">
-                      Original AI Recommendation: <strong>{cluster.priorityLevel}</strong>
+                      Original AI Recommendation: <strong>{aiPriorityLevel}</strong>
                     </span>
                   </div>
 
@@ -732,6 +744,13 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
                         key={level}
                         type="button"
                         onClick={() => setAdjustedLevel(level)}
+                        title={
+                          level === "High"
+                            ? "High Priority (Score ≥ 80)"
+                            : level === "Medium"
+                            ? "Medium Priority (Score 60–79.9)"
+                            : "Low Priority (Score below 60)"
+                        }
                         className={`px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider transition-all cursor-pointer border ${
                           adjustedLevel === level
                             ? level === "High"
@@ -832,7 +851,7 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
                   <th className="py-2.5 px-3">Factor</th>
                   <th className="py-2.5 px-3 text-center">Weight</th>
                   <th className="py-2.5 px-3">Raw Evidence</th>
-                  <th className="py-2.5 px-3 text-right">Normalized (0-10)</th>
+                  <th className="py-2.5 px-3 text-right">Normalized (0–100)</th>
                   <th className="py-2.5 px-3 text-right font-bold text-slate-900">
                     Weighted Points
                   </th>

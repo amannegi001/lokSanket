@@ -163,6 +163,8 @@ export interface Translations {
     kpiHighPrioritySub: string;
     kpiMediumPriority: string;
     kpiMediumPrioritySub: string;
+    kpiLowPriority: string;
+    kpiLowPrioritySub: string;
     kpiAffectedLocalities: string;
     kpiAffectedLocalitiesSub: string;
 
@@ -476,9 +478,11 @@ export const translations: Record<Language, Translations> = {
       kpiTotalReports: "Total Reports",
       kpiAcrossCategories: (count: number) => `Across ${count} civic categories`,
       kpiHighPriority: "High-Priority Issues",
-      kpiHighPrioritySub: "Score ≥ 70.0 based on 5 deterministic factors",
+      kpiHighPrioritySub: "Score ≥ 80 based on 5 deterministic factors",
       kpiMediumPriority: "Medium Priority",
-      kpiMediumPrioritySub: "Score between 40.0 and 69.9",
+      kpiMediumPrioritySub: "Score 60–79.9",
+      kpiLowPriority: "Low Priority",
+      kpiLowPrioritySub: "Score below 60",
       kpiAffectedLocalities: "Affected Localities",
       kpiAffectedLocalitiesSub: "Distinct geographic zones reporting issues",
 
@@ -529,7 +533,7 @@ export const translations: Record<Language, Translations> = {
       chartReportsSeries: "Reports",
 
       provenanceHeading: "Data Provenance & Mathematical Engine",
-      provenanceBody: "LokSanket operates on a five-factor deterministic scoring model combining Demand Volume (30%), Severity (25%), Trend Velocity (15%), Geographic Spread (15%), and Verified Evidence (15%). Priority scores are computed strictly through algorithmic weights rather than generative estimates.",
+      provenanceBody: "LokSanket operates on a five-factor deterministic scoring model combining Demand Volume (30%), Severity (25%), Recent Trend (20%), Geographic Spread (15%), and Verified Evidence (10%). Priority scores are computed strictly through algorithmic weights rather than generative estimates.",
       constituencyLabel: "Constituency:",
       datasetLabel: "Dataset:",
       publicOrientation: "Public insights view · Decision-support orientation",
@@ -790,9 +794,11 @@ export const translations: Record<Language, Translations> = {
       kpiTotalReports: "कुल रिपोर्टें",
       kpiAcrossCategories: (count: number) => `${count} नागरिक श्रेणियों में`,
       kpiHighPriority: "उच्च प्राथमिकता वाली समस्याएं",
-      kpiHighPrioritySub: "5 वस्तुनिष्ठ कारकों के आधार पर स्कोर ≥ 70.0",
+      kpiHighPrioritySub: "5 वस्तुनिष्ठ कारकों के आधार पर स्कोर ≥ 80",
       kpiMediumPriority: "मध्यम प्राथमिकता",
-      kpiMediumPrioritySub: "40.0 और 69.9 के बीच स्कोर",
+      kpiMediumPrioritySub: "स्कोर 60–79.9",
+      kpiLowPriority: "निम्न प्राथमिकता",
+      kpiLowPrioritySub: "60 से नीचे स्कोर",
       kpiAffectedLocalities: "प्रभावित क्षेत्र",
       kpiAffectedLocalitiesSub: "समस्याएं दर्ज करने वाले विभिन्न भौगोलिक क्षेत्र",
 
@@ -843,7 +849,7 @@ export const translations: Record<Language, Translations> = {
       chartReportsSeries: "रिपोर्टें",
 
       provenanceHeading: "डेटा स्रोत और गणितीय इंजन",
-      provenanceBody: "LokSanket एक पांच-कारकीय वस्तुनिष्ठ स्कोरिंग मॉडल पर कार्य करता है, जिसमें मांग की मात्रा (30%), गंभीरता (25%), रुझान गति (15%), भौगोलिक फैलाव (15%) और सत्यापित साक्ष्य (15%) शामिल हैं। प्राथमिकता स्कोर बिना किसी कृत्रिम अनुमान के पूरी तरह से एल्गोरिदम भार के माध्यम से तय किए जाते हैं।",
+      provenanceBody: "LokSanket एक पांच-कारकीय वस्तुनिष्ठ स्कोरिंग मॉडल पर कार्य करता है, जिसमें मांग की मात्रा (30%), गंभीरता (25%), हालिया रुझान (20%), भौगोलिक फैलाव (15%) और सत्यापित साक्ष्य (10%) शामिल हैं। प्राथमिकता स्कोर बिना किसी कृत्रिम अनुमान के पूरी तरह से एल्गोरिदम भार के माध्यम से तय किए जाते हैं।",
       constituencyLabel: "निर्वाचन क्षेत्र:",
       datasetLabel: "डेटासेट:",
       publicOrientation: "सार्वजनिक अंतर्दृष्टि दृश्य · निर्णय-सहायता उन्मुखीकरण",

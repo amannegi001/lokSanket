@@ -1,7 +1,13 @@
-import { connectDB } from "@/lib/db";
-import { Complaint, IComplaint } from "@/models/Complaint";
-import { IssueCluster, IClusterEvidence } from "@/models/IssueCluster";
+import type { IComplaint } from "@/models/Complaint";
+import type { IClusterEvidence } from "@/models/IssueCluster";
 import { RawClusterGroup, groupComplaintsIntoClusters } from "./clustering";
+
+export type PriorityLevel = "High" | "Medium" | "Low";
+
+export interface PriorityClassificationOptions {
+  safe?: boolean;
+  fallback?: PriorityLevel;
+}
 
 /**
  * Global Deterministic Priority Configuration.
@@ -14,9 +20,9 @@ import { RawClusterGroup, groupComplaintsIntoClusters } from "./clustering";
  * - 10% Evidence Strength
  * 
  * Classification Thresholds:
- * - 80–100 -> High Priority
- * - 60–79  -> Medium Priority
- * - 0–59   -> Low Priority
+ * - High:   80 <= score <= 100
+ * - Medium: 60 <= score < 80
+ * - Low:     0 <= score < 60
  */
 export const PRIORITY_CONFIG = {
   weights: {
@@ -38,6 +44,68 @@ export const PRIORITY_CONFIG = {
   },
   trendWindowDays: 14,
 } as const;
+
+/**
+ * Validates whether an unknown value is a valid numerical priority score (0–100 number).
+ */
+export function isValidPriorityScore(score: unknown): score is number {
+  return (
+    typeof score === "number" &&
+    !Number.isNaN(score) &&
+    Number.isFinite(score) &&
+    score >= 0 &&
+    score <= 100
+  );
+}
+
+/**
+ * Shared Deterministic Priority Classification Function.
+ * 
+ * Source of truth:
+ * - High:   Score >= 80 and <= 100
+ * - Medium: Score >= 60 and < 80
+ * - Low:    Score >= 0 and < 60
+ * 
+ * Invariants:
+ * 1. The numerical score is the single authoritative source of truth.
+ * 2. Scores are NOT rounded before classification; rounding is for display only.
+ * 3. Invalid inputs (negative numbers, numbers > 100, NaN, non-numeric values like null,
+ *    undefined, strings, objects) are handled safely:
+ *    - By default throws TypeError or RangeError rather than silently receiving an incorrect label.
+ *    - If options.safe is true, returns options.fallback (defaults to "Low").
+ */
+export function classifyPriority(
+  score: unknown,
+  options?: PriorityClassificationOptions
+): PriorityLevel {
+  const isValidNumber =
+    typeof score === "number" && !Number.isNaN(score) && Number.isFinite(score);
+  const isInBounds = isValidNumber && score >= 0 && score <= 100;
+
+  if (!isInBounds) {
+    if (options?.safe) {
+      return options.fallback ?? "Low";
+    }
+    if (!isValidNumber) {
+      throw new TypeError(
+        `Invalid priority score: ${String(score)}. Priority score must be a finite number.`
+      );
+    }
+    throw new RangeError(
+      `Priority score out of bounds: ${score}. Priority score must be between 0 and 100.`
+    );
+  }
+
+  if (score >= PRIORITY_CONFIG.thresholds.high) {
+    return "High";
+  }
+  if (score >= PRIORITY_CONFIG.thresholds.medium) {
+    return "Medium";
+  }
+  return "Low";
+}
+
+export const getPriorityLevel = classifyPriority;
 
 export interface PriorityComponentBreakdown {
   name: string;
@@ -423,14 +491,7 @@ export function calculateClusterPriority(
   );
 
   // F. Classification Level
-  let priorityLevel: "High" | "Medium" | "Low";
-  if (priorityScore >= PRIORITY_CONFIG.thresholds.high) {
-    priorityLevel = "High";
-  } else if (priorityScore >= PRIORITY_CONFIG.thresholds.medium) {
-    priorityLevel = "Medium";
-  } else {
-    priorityLevel = "Low";
-  }
+  const priorityLevel = classifyPriority(priorityScore);
 
   // G. Traceability Explanation Object
   const explanation: PriorityScoreExplanation = {
@@ -548,75 +609,4 @@ export function processComplaintsPipeline(
   return calculatedClusters;
 }
 
-/**
- * Connects to MongoDB, processes all complaints, updates/persists
- * priority scores on all IssueCluster records, and links complaints.
- */
-export async function recalculateAndPersistPriorities(
-  referenceDate: Date = new Date()
-): Promise<{
-  success: boolean;
-  totalClustersUpdated: number;
-  rankedClusters: CalculatedClusterData[];
-  ward17RoadCluster: CalculatedClusterData | null;
-}> {
-  await connectDB();
 
-  const complaints = await Complaint.find().sort({ createdAt: -1 });
-  if (complaints.length === 0) {
-    return {
-      success: false,
-      totalClustersUpdated: 0,
-      rankedClusters: [],
-      ward17RoadCluster: null,
-    };
-  }
-
-  const calculatedClusters = processComplaintsPipeline(complaints, referenceDate);
-
-  // Idempotently clear and save priority clusters
-  await IssueCluster.deleteMany({});
-
-  for (const cData of calculatedClusters) {
-    const clusterDoc = await IssueCluster.create({
-      title: cData.title,
-      category: cData.category,
-      subcategory: cData.subcategory,
-      wardIds: cData.wardIds,
-      complaintIds: cData.complaintIds,
-      reportCount: cData.reportCount,
-      severityScore: cData.severityScore,
-      trendScore: cData.trendScore,
-      geographicScore: cData.geographicScore,
-      evidenceScore: cData.evidenceScore,
-      priorityScore: cData.priorityScore,
-      priorityLevel: cData.priorityLevel,
-      evidence: cData.evidence,
-      aiExplanation: `Deterministic Priority: ${cData.priorityScore}/100 (${cData.priorityLevel}). ${cData.reportCount} reports across ${cData.evidence.affectedLocalities} localities in ${cData.wardIds.join(", ")}.`,
-      officialDecision: "pending_review",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    // Link complaint documents back to cluster
-    await Complaint.updateMany(
-      { _id: { $in: cData.complaintIds } },
-      { $set: { clusterId: clusterDoc._id, status: "clustered" } }
-    );
-  }
-
-  const ward17RoadCluster =
-    calculatedClusters.find(
-      (c) =>
-        c.category === "Road Infrastructure" &&
-        c.wardIds.includes("Ward 17") &&
-        c.subcategory.toLowerCase().includes("pothole")
-    ) || null;
-
-  return {
-    success: true,
-    totalClustersUpdated: calculatedClusters.length,
-    rankedClusters: calculatedClusters,
-    ward17RoadCluster,
-  };
-}

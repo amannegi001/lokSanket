@@ -5,6 +5,9 @@ import {
   calculateGeographicConcentrationScore,
   calculateEvidenceStrengthScore,
   calculateClusterPriority,
+  classifyPriority,
+  getPriorityLevel,
+  isValidPriorityScore,
   PRIORITY_CONFIG,
 } from "../lib/priority";
 import { RawClusterGroup } from "../lib/clustering";
@@ -188,6 +191,126 @@ function runEdgeCaseTests() {
   );
   assert(dispersedGeo.score <= 25, "25 dispersed localities produces low concentration score (<=25)");
   assert(dispersedGeo.hhi === 0.04, "HHI is 0.04 (1/25) for equal dispersion");
+
+  // -------------------------------------------------------------------------
+  // Test 11: Exact Boundary Value Tests
+  // -------------------------------------------------------------------------
+  console.log("\nTest 11: Exact Boundary Value Tests");
+  const boundaryCases = [
+    { score: 0, expected: "Low" },
+    { score: 39.9, expected: "Low" },
+    { score: 59.9, expected: "Low" },
+    { score: 60, expected: "Medium" },
+    { score: 69.9, expected: "Medium" },
+    { score: 79.9, expected: "Medium" },
+    { score: 80, expected: "High" },
+    { score: 99.9, expected: "High" },
+    { score: 100, expected: "High" },
+  ] as const;
+
+  for (const { score, expected } of boundaryCases) {
+    const level = classifyPriority(score);
+    assert(level === expected, `Score ${score} -> ${expected} (got: ${level})`);
+  }
+
+  // Also verify alias getPriorityLevel behaves identically
+  assert(getPriorityLevel(80) === "High", "getPriorityLevel alias works identically for High");
+  assert(getPriorityLevel(60) === "Medium", "getPriorityLevel alias works identically for Medium");
+  assert(getPriorityLevel(0) === "Low", "getPriorityLevel alias works identically for Low");
+
+  // -------------------------------------------------------------------------
+  // Test 12: Unrounded Classification Precision (No Rounding Before Classification)
+  // -------------------------------------------------------------------------
+  console.log("\nTest 12: Unrounded Classification Precision");
+  // 59.999 is strictly < 60 -> Low. If rounded to 60, it would incorrectly be Medium.
+  assert(
+    classifyPriority(59.999) === "Low",
+    "Score 59.999 is Low (unrounded precision strictly respected)"
+  );
+  // 79.999 is strictly < 80 -> Medium. If rounded to 80, it would incorrectly be High.
+  assert(
+    classifyPriority(79.999) === "Medium",
+    "Score 79.999 is Medium (unrounded precision strictly respected)"
+  );
+  assert(
+    classifyPriority(59.5) === "Low",
+    "Score 59.5 is Low (Math.round(59.5) would be 60, but raw score is <60)"
+  );
+
+  // -------------------------------------------------------------------------
+  // Test 13: Invalid Input Safety (Throws rather than silently mislabeling)
+  // -------------------------------------------------------------------------
+  console.log("\nTest 13: Invalid Input Safety");
+  const invalidInputs = [
+    { val: -0.1, label: "negative value -0.1" },
+    { val: -10, label: "negative value -10" },
+    { val: 100.1, label: "value above 100 (100.1)" },
+    { val: 150, label: "value above 100 (150)" },
+    { val: NaN, label: "NaN" },
+    { val: Infinity, label: "Infinity" },
+    { val: -Infinity, label: "-Infinity" },
+    { val: null, label: "null" },
+    { val: undefined, label: "undefined" },
+    { val: "85.4", label: "string '85.4'" },
+    { val: {}, label: "object {}" },
+    { val: [], label: "array []" },
+  ];
+
+  for (const item of invalidInputs) {
+    let threw = false;
+    try {
+      classifyPriority(item.val);
+    } catch (err: unknown) {
+      threw = err instanceof TypeError || err instanceof RangeError || err instanceof Error;
+    }
+    assert(threw, `Invalid score (${item.label}) safely throws error instead of silently receiving a label`);
+    assert(!isValidPriorityScore(item.val), `isValidPriorityScore returns false for ${item.label}`);
+  }
+
+  // Safe mode option
+  assert(
+    classifyPriority(-5, { safe: true, fallback: "Low" }) === "Low",
+    "Safe mode returns specified fallback for negative score"
+  );
+  assert(
+    classifyPriority(150, { safe: true, fallback: "Medium" }) === "Medium",
+    "Safe mode returns specified fallback for score above 100"
+  );
+  assert(
+    classifyPriority("invalid", { safe: true, fallback: "Low" }) === "Low",
+    "Safe mode returns fallback for non-numeric input"
+  );
+
+  // Valid score validation checks
+  assert(isValidPriorityScore(0), "isValidPriorityScore(0) is true");
+  assert(isValidPriorityScore(59.5), "isValidPriorityScore(59.5) is true");
+  assert(isValidPriorityScore(80), "isValidPriorityScore(80) is true");
+  assert(isValidPriorityScore(100), "isValidPriorityScore(100) is true");
+
+  // -------------------------------------------------------------------------
+  // Test 14: Authoritative Priority Benchmark Examples (Audit Specification)
+  // -------------------------------------------------------------------------
+  console.log("\nTest 14: Authoritative Priority Benchmark Examples");
+  const authoritativeExamples = [
+    { score: 85.4, expected: "High", label: "Road Damage & Potholes (85.4)" },
+    { score: 80.0, expected: "High", label: "Exact High Threshold Boundary (80.0)" },
+    { score: 79.9, expected: "Medium", label: "Upper Medium Boundary (79.9)" },
+    { score: 78.0, expected: "Medium", label: "Overflowing Open Drains (78.0)" },
+    { score: 65.3, expected: "Medium", label: "Unattended Garbage Dumps (65.3)" },
+    { score: 61.6, expected: "Medium", label: "Transformer Overload & Fluctuations (61.6)" },
+    { score: 60.0, expected: "Medium", label: "Exact Medium Threshold Boundary (60.0)" },
+    { score: 59.9, expected: "Low", label: "Upper Low Boundary (59.9)" },
+    { score: 59.5, expected: "Low", label: "Blocked Stormwater Drains (59.5)" },
+    { score: 0, expected: "Low", label: "Zero Priority Score (0)" },
+  ] as const;
+
+  for (const ex of authoritativeExamples) {
+    const level = classifyPriority(ex.score);
+    assert(
+      level === ex.expected,
+      `${ex.label} (Score: ${ex.score}) -> Expected: ${ex.expected}, Got: ${level}`
+    );
+  }
 
   // -------------------------------------------------------------------------
   // Global Bounds & Weight Validation

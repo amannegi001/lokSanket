@@ -9,6 +9,7 @@ import {
   PriorityEvidenceItem,
 } from "@/lib/gemini";
 import { isOfficialAuthenticatedRequest } from "@/lib/auth";
+import { classifyPriority } from "@/lib/priority";
 
 export async function GET() {
   try {
@@ -71,7 +72,7 @@ export async function GET() {
         subcategory: c.subcategory,
         wardIds: c.wardIds || [],
         priorityScore: c.priorityScore,
-        priorityLevel: c.priorityLevel,
+        priorityLevel: classifyPriority(c.priorityScore, { safe: true, fallback: c.priorityLevel || "Low" }),
         reportCount: c.reportCount,
         localityCount: c.evidence?.affectedLocalities || c.evidence?.localities?.length || 1,
         localities: c.evidence?.localities || [],
@@ -191,7 +192,7 @@ export async function POST(request: Request) {
         subcategory: c.subcategory,
         wardIds: c.wardIds || [],
         priorityScore: c.priorityScore,
-        priorityLevel: c.priorityLevel,
+        priorityLevel: classifyPriority(c.priorityScore, { safe: true, fallback: c.priorityLevel || "Low" }),
         reportCount: c.reportCount,
         localityCount: c.evidence?.affectedLocalities || c.evidence?.localities?.length || 1,
         localities: c.evidence?.localities || [],

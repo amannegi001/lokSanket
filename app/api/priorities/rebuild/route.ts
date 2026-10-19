@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { recalculateAndPersistPriorities } from "@/lib/priority";
+import { classifyPriority } from "@/lib/priority";
+import { recalculateAndPersistPriorities } from "@/lib/priority-persistence";
 import { isOfficialAuthenticatedRequest } from "@/lib/auth";
 
 export async function POST(request: Request) {
@@ -26,9 +27,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const highCount = result.rankedClusters.filter((c) => c.priorityLevel === "High").length;
-    const medCount = result.rankedClusters.filter((c) => c.priorityLevel === "Medium").length;
-    const lowCount = result.rankedClusters.filter((c) => c.priorityLevel === "Low").length;
+    const highCount = result.rankedClusters.filter(
+      (c) => classifyPriority(c.priorityScore, { safe: true, fallback: "Low" }) === "High"
+    ).length;
+    const medCount = result.rankedClusters.filter(
+      (c) => classifyPriority(c.priorityScore, { safe: true, fallback: "Low" }) === "Medium"
+    ).length;
+    const lowCount = result.rankedClusters.filter(
+      (c) => classifyPriority(c.priorityScore, { safe: true, fallback: "Low" }) === "Low"
+    ).length;
 
     return NextResponse.json({
       success: true,

@@ -4,6 +4,7 @@ import { Complaint } from "@/models/Complaint";
 import { IssueCluster } from "@/models/IssueCluster";
 import { Review } from "@/models/Review";
 import { sanitizeLocality } from "@/lib/clustering";
+import { classifyPriority } from "@/lib/priority";
 
 export async function GET() {
   try {
@@ -91,15 +92,15 @@ export async function GET() {
       clusterId: c.clusterId ? c.clusterId.toString() : null,
     }));
 
-    // Priority level counts derived directly from stored clusters
+    // Priority level counts derived deterministically from priorityScore (source of truth)
     const highPriorityCount = clusters.filter(
-      (c) => c.priorityLevel === "High"
+      (c) => classifyPriority(c.priorityScore, { safe: true, fallback: "Low" }) === "High"
     ).length;
     const mediumPriorityCount = clusters.filter(
-      (c) => c.priorityLevel === "Medium"
+      (c) => classifyPriority(c.priorityScore, { safe: true, fallback: "Low" }) === "Medium"
     ).length;
     const lowPriorityCount = clusters.filter(
-      (c) => c.priorityLevel === "Low"
+      (c) => classifyPriority(c.priorityScore, { safe: true, fallback: "Low" }) === "Low"
     ).length;
 
     const affectedLocalitiesCount = distinctLocalities.filter(Boolean).length;
@@ -125,14 +126,16 @@ export async function GET() {
       }
     }
 
-    // Attach canonical review to each cluster
+    // Attach canonical review to each cluster and ensure priorityLevel matches score
     const clustersWithReviews = clusters.map((c) => {
       const cId = c._id.toString();
       const canonicalReview = reviewByClusterId.get(cId);
+      const priorityLevel = classifyPriority(c.priorityScore, { safe: true, fallback: c.priorityLevel || "Low" });
 
       if (canonicalReview && canonicalReview.decision) {
         return {
           ...c,
+          priorityLevel,
           officialDecision:
             canonicalReview.decision === "accept"
               ? "approved_for_action"
@@ -155,6 +158,7 @@ export async function GET() {
       if (c.review && c.review.decision) {
         return {
           ...c,
+          priorityLevel,
           review: {
             decision: c.review.decision,
             note: c.review.note || "",
@@ -169,6 +173,7 @@ export async function GET() {
       // No actual human review decision exists
       return {
         ...c,
+        priorityLevel,
         officialDecision: "pending_review",
         review: null,
       };

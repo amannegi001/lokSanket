@@ -9,10 +9,8 @@ try {
 }
 
 import { Complaint } from "../models/Complaint";
-import {
-  recalculateAndPersistPriorities,
-  PRIORITY_CONFIG,
-} from "../lib/priority";
+import { classifyPriority } from "../lib/priority";
+import { recalculateAndPersistPriorities } from "../lib/priority-persistence";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -43,7 +41,7 @@ async function runPriorityPipeline() {
   console.log("\n-------------------------------------------------");
   console.log("CALCULATING & PERSISTING PRIORITY SCORES (PASS 1)...");
   console.log("-------------------------------------------------");
-  const referenceDate = new Date();
+  const referenceDate = new Date("2026-09-30T10:00:00.000Z");
   const pass1 = await recalculateAndPersistPriorities(referenceDate);
 
   console.log(`✓ Processed and scored ${pass1.totalClustersUpdated} IssueClusters.`);
@@ -88,10 +86,7 @@ async function runPriorityPipeline() {
     }
 
     // Verify classification match
-    let expectedLevel: "High" | "Medium" | "Low";
-    if (s >= PRIORITY_CONFIG.thresholds.high) expectedLevel = "High";
-    else if (s >= PRIORITY_CONFIG.thresholds.medium) expectedLevel = "Medium";
-    else expectedLevel = "Low";
+    const expectedLevel = classifyPriority(s);
 
     if (c.priorityLevel !== expectedLevel) {
       levelMismatches++;

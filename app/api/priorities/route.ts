@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { IssueCluster } from "@/models/IssueCluster";
+import { classifyPriority, PRIORITY_CONFIG } from "@/lib/priority";
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +15,19 @@ export async function GET(request: Request) {
 
     const filter: Record<string, unknown> = {};
     if (level) {
-      filter.priorityLevel = level;
+      const normalizedLevel = level.trim().toLowerCase();
+      if (normalizedLevel === "high") {
+        filter.priorityScore = { $gte: PRIORITY_CONFIG.thresholds.high, $lte: 100 };
+      } else if (normalizedLevel === "medium") {
+        filter.priorityScore = {
+          $gte: PRIORITY_CONFIG.thresholds.medium,
+          $lt: PRIORITY_CONFIG.thresholds.high,
+        };
+      } else if (normalizedLevel === "low") {
+        filter.priorityScore = { $gte: 0, $lt: PRIORITY_CONFIG.thresholds.medium };
+      } else {
+        filter.priorityLevel = level;
+      }
     }
     if (category) {
       filter.category = new RegExp(category, "i");
@@ -24,10 +37,15 @@ export async function GET(request: Request) {
     }
 
     // Deterministic ranking: highest priorityScore first
-    const clusters = await IssueCluster.find(filter)
+    const rawClusters = await IssueCluster.find(filter)
       .sort({ priorityScore: -1, reportCount: -1 })
       .limit(limit)
       .lean();
+
+    const clusters = rawClusters.map((c) => ({
+      ...c,
+      priorityLevel: classifyPriority(c.priorityScore, { safe: true, fallback: c.priorityLevel || "Low" }),
+    }));
 
     return NextResponse.json({
       success: true,

@@ -13,6 +13,7 @@ import {
   formatSubcategoryName,
   formatRelativeTime,
 } from "@/lib/i18n";
+import { classifyPriority } from "@/lib/priority";
 import {
   AlertTriangle,
   TrendingUp,
@@ -229,7 +230,8 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
   };
 
   const filteredClusters = allClusters.filter((c) => {
-    if (selectedLevel !== "all" && c.priorityLevel !== selectedLevel) {
+    const level = classifyPriority(c.priorityScore, { safe: true, fallback: c.priorityLevel || "Low" });
+    if (selectedLevel !== "all" && level !== selectedLevel) {
       return false;
     }
     if (selectedCategory !== "all" && c.category !== selectedCategory) {
@@ -511,9 +513,9 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
                   className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs"
                 >
                   <option value="all">{td.filterAllPriorities}</option>
-                  <option value="High">{td.filterHighOnly}</option>
-                  <option value="Medium">{td.filterMediumOnly}</option>
-                  <option value="Low">{td.filterLowOnly}</option>
+                  <option value="High" title={td.kpiHighPrioritySub}>{td.filterHighOnly}</option>
+                  <option value="Medium" title={td.kpiMediumPrioritySub}>{td.filterMediumOnly}</option>
+                  <option value="Low" title={td.kpiLowPrioritySub}>{td.filterLowOnly}</option>
                 </select>
 
                 {/* Category filter */}
@@ -645,22 +647,39 @@ export default function ConstituencyDashboard({ mode }: ConstituencyDashboardPro
 
                           {/* Priority Score & Level */}
                           <td className="py-3 px-3 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-2">
-                              <span className="font-black text-slate-900 text-sm">
-                                {cluster.priorityScore.toFixed(1)}
-                              </span>
-                              <span
-                                className={`text-[10px] px-2 py-0.2 rounded border ${getPriorityBadgeStyles(
-                                  cluster.priorityLevel
-                                )}`}
-                              >
-                                {cluster.priorityLevel === "High"
-                                  ? td.levelHigh
-                                  : cluster.priorityLevel === "Medium"
-                                  ? td.levelMedium
-                                  : td.levelLow}
-                              </span>
-                            </div>
+                            {(() => {
+                              const level = classifyPriority(cluster.priorityScore, {
+                                safe: true,
+                                fallback: cluster.priorityLevel || "Low",
+                              });
+                              const priorityDesc =
+                                level === "High"
+                                  ? td.kpiHighPrioritySub
+                                  : level === "Medium"
+                                  ? td.kpiMediumPrioritySub
+                                  : td.kpiLowPrioritySub;
+                              return (
+                                <div
+                                  className="flex items-center justify-end gap-2"
+                                  title={`${level} Priority: ${priorityDesc}`}
+                                >
+                                  <span className="font-black text-slate-900 text-sm">
+                                    {cluster.priorityScore.toFixed(1)}
+                                  </span>
+                                  <span
+                                    className={`text-[10px] px-2 py-0.2 rounded border ${getPriorityBadgeStyles(
+                                      level
+                                    )}`}
+                                  >
+                                    {level === "High"
+                                      ? td.levelHigh
+                                      : level === "Medium"
+                                      ? td.levelMedium
+                                      : td.levelLow}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           {/* Official Decision Column (in official mode) */}
