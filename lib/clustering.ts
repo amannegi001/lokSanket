@@ -132,7 +132,7 @@ export function sanitizeLocality(location?: string, rawText?: string): string {
 /**
  * Normalizes string keys for stable canonical grouping.
  */
-function normalizeString(str?: string): string {
+export function normalizeString(str?: string): string {
   return (str || "General")
     .trim()
     .toLowerCase()

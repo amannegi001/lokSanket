@@ -1,11 +1,19 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Complaint } from "@/models/Complaint";
-import { IssueCluster } from "@/models/IssueCluster";
+import { IssueCluster, IIssueCluster } from "@/models/IssueCluster";
 import {
   processComplaintsPipeline,
   classifyPriority,
   CalculatedClusterData,
+  calculateClusterPriority,
 } from "./priority";
+import {
+  extractWard,
+  formatClusterTitle,
+  normalizeString,
+  RawClusterGroup,
+} from "./clustering";
 
 /**
  * Connects to MongoDB, processes all complaints, updates/persists
@@ -126,5 +134,156 @@ export async function recalculateAndPersistPriorities(
     totalClustersUpdated: calculatedClusters.length,
     rankedClusters: calculatedClusters,
     ward17RoadCluster,
+  };
+}
+
+export interface AssignComplaintResult {
+  success: boolean;
+  cluster: IIssueCluster;
+  isNewCluster: boolean;
+  complaintId: string;
+}
+
+/**
+ * Assigns a single complaint to its matching ward-level issue cluster
+ * (Category + Subcategory + Ward) and deterministically recalculates
+ * the affected cluster's priority metrics.
+ *
+ * If no matching cluster exists, a new cluster is created.
+ * Preserves existing human review decisions and official decision states.
+ */
+export async function assignComplaintToClusterAndRecalculate(
+  complaintId: string | mongoose.Types.ObjectId,
+  referenceDate?: Date
+): Promise<AssignComplaintResult> {
+  await connectDB();
+
+  const complaint = await Complaint.findById(complaintId);
+  if (!complaint) {
+    throw new Error(`Complaint not found: ${String(complaintId)}`);
+  }
+
+  const category = complaint.category?.trim() || "General Civic Issue";
+  const subcategory = complaint.subcategory?.trim() || "General Grievance";
+  const ward = extractWard(complaint.location, complaint.rawText);
+
+  const normCat = normalizeString(category);
+  const normSub = normalizeString(subcategory);
+  const normWard = normalizeString(ward);
+  const clusterKey = `${normCat}:::${normSub}:::${normWard}`;
+  const clusterTitle = formatClusterTitle(category, subcategory, ward);
+
+  // 1. Locate matching cluster
+  // Strictly enforce ward boundary: cluster must belong to the exact same ward
+  const existingClustersInWard = await IssueCluster.find({ wardIds: ward });
+  const matchingCluster = existingClustersInWard.find((c) => {
+    const cCat = normalizeString(c.category);
+    const cSub = normalizeString(c.subcategory);
+    const cWard = normalizeString(c.wardIds?.[0] || ward);
+    const key = `${cCat}:::${cSub}:::${cWard}`;
+    return key === clusterKey || c.title.trim().toLowerCase() === clusterTitle.trim().toLowerCase();
+  });
+
+  // Query highest report count in the database for log-scale demand volume normalization
+  const maxCluster = await IssueCluster.findOne().sort({ reportCount: -1 }).select("reportCount").lean();
+  const currentMax = maxCluster?.reportCount || 100;
+
+  const effectiveRefDate =
+    referenceDate ??
+    (process.env.PRIORITY_REFERENCE_DATE
+      ? new Date(process.env.PRIORITY_REFERENCE_DATE)
+      : new Date());
+
+  let clusterDoc: IIssueCluster;
+  let isNewCluster = false;
+
+  if (matchingCluster) {
+    // Prevent duplicate complaint IDs
+    const cIdStr = complaint._id.toString();
+    const existingIds = matchingCluster.complaintIds.map((id) => id.toString());
+    if (!existingIds.includes(cIdStr)) {
+      matchingCluster.complaintIds.push(complaint._id);
+    }
+
+    // Fetch all complaints belonging to this cluster to recalculate exact evidence & priority
+    const allComplaints = await Complaint.find({
+      _id: { $in: matchingCluster.complaintIds },
+    });
+
+    const maxReportCount = Math.max(currentMax, allComplaints.length);
+    const rawGroup: RawClusterGroup = {
+      clusterKey,
+      title: matchingCluster.title || clusterTitle,
+      category: matchingCluster.category || category,
+      subcategory: matchingCluster.subcategory || subcategory,
+      wardIds: matchingCluster.wardIds?.length ? matchingCluster.wardIds : [ward],
+      complaints: allComplaints,
+    };
+
+    const calculated = calculateClusterPriority(rawGroup, maxReportCount, effectiveRefDate);
+    const level = classifyPriority(calculated.priorityScore);
+
+    matchingCluster.reportCount = allComplaints.length;
+    matchingCluster.severityScore = calculated.severityScore;
+    matchingCluster.trendScore = calculated.trendScore;
+    matchingCluster.geographicScore = calculated.geographicScore;
+    matchingCluster.evidenceScore = calculated.evidenceScore;
+    matchingCluster.priorityScore = calculated.priorityScore;
+    matchingCluster.priorityLevel = level;
+    matchingCluster.evidence = calculated.evidence;
+    matchingCluster.updatedAt = new Date();
+
+    // Preserve existing human review & official decision
+    if (!matchingCluster.officialDecision) {
+      matchingCluster.officialDecision = "pending_review";
+    }
+
+    clusterDoc = await matchingCluster.save();
+  } else {
+    isNewCluster = true;
+    const maxReportCount = Math.max(currentMax, 1);
+    const rawGroup: RawClusterGroup = {
+      clusterKey,
+      title: clusterTitle,
+      category,
+      subcategory,
+      wardIds: [ward],
+      complaints: [complaint],
+    };
+
+    const calculated = calculateClusterPriority(rawGroup, maxReportCount, effectiveRefDate);
+    const level = classifyPriority(calculated.priorityScore);
+
+    clusterDoc = await IssueCluster.create({
+      title: clusterTitle,
+      category,
+      subcategory,
+      wardIds: [ward],
+      complaintIds: [complaint._id],
+      reportCount: 1,
+      severityScore: calculated.severityScore,
+      trendScore: calculated.trendScore,
+      geographicScore: calculated.geographicScore,
+      evidenceScore: calculated.evidenceScore,
+      priorityScore: calculated.priorityScore,
+      priorityLevel: level,
+      evidence: calculated.evidence,
+      aiExplanation: `Deterministic Priority: ${calculated.priorityScore}/100 (${level}). 1 report in ${category} in ${ward}.`,
+      officialDecision: "pending_review",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  // Update complaint with assigned clusterId and status: "clustered"
+  complaint.clusterId = clusterDoc._id;
+  complaint.status = "clustered";
+  await complaint.save();
+
+  return {
+    success: true,
+    cluster: clusterDoc,
+    isNewCluster,
+    complaintId: complaint._id.toString(),
   };
 }

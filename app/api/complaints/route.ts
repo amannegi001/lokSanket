@@ -7,6 +7,7 @@ import {
   validatePhotoFiles,
   storePhotosInGridFS,
 } from "@/lib/storage";
+import { assignComplaintToClusterAndRecalculate } from "@/lib/priority-persistence";
 
 export async function POST(request: Request) {
   try {
@@ -194,8 +195,9 @@ export async function POST(request: Request) {
     }
 
     // 3. Store normalized structured complaint in MongoDB
+    let newComplaint;
     try {
-      const newComplaint = await Complaint.create({
+      newComplaint = await Complaint.create({
         rawText,
         language: extracted.language || "unknown",
         normalizedText: extracted.normalizedText,
@@ -211,20 +213,55 @@ export async function POST(request: Request) {
         status: "new",
         createdAt: new Date(),
       });
-
-      return NextResponse.json(
-        {
-          success: true,
-          complaint: newComplaint,
-        },
-        { status: 201 }
-      );
     } catch (saveError: unknown) {
       console.error("[POST /api/complaints] Failed to save complaint:", saveError);
       return NextResponse.json(
         {
           success: false,
           error: "Failed to persist complaint. Please try again.",
+        },
+        { status: 500 }
+      );
+    }
+
+    // 4. Automatically assign complaint to matching cluster & recalculate deterministic priority
+    try {
+      const clusterResult = await assignComplaintToClusterAndRecalculate(newComplaint._id);
+
+      return NextResponse.json(
+        {
+          success: true,
+          complaint: {
+            ...newComplaint.toObject(),
+            clusterId: clusterResult.cluster._id,
+            status: "clustered",
+          },
+          cluster: {
+            _id: clusterResult.cluster._id,
+            title: clusterResult.cluster.title,
+            category: clusterResult.cluster.category,
+            subcategory: clusterResult.cluster.subcategory,
+            wardIds: clusterResult.cluster.wardIds,
+            reportCount: clusterResult.cluster.reportCount,
+            priorityScore: clusterResult.cluster.priorityScore,
+            priorityLevel: clusterResult.cluster.priorityLevel,
+            isNewCluster: clusterResult.isNewCluster,
+          },
+        },
+        { status: 201 }
+      );
+    } catch (clusteringError: unknown) {
+      console.error(
+        "[POST /api/complaints] Automatic cluster assignment failed for complaint:",
+        newComplaint._id,
+        clusteringError
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Complaint was recorded, but automatic cluster assignment failed. Complaint queued for cluster rebuild.",
+          complaintId: newComplaint._id,
         },
         { status: 500 }
       );
