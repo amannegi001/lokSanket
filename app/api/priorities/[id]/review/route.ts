@@ -137,7 +137,27 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     // Validate note
-    const sanitizedNote = typeof note === "string" ? note.trim().slice(0, 2000) : "";
+    if (note !== undefined && note !== null) {
+      if (typeof note !== "string") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Review note must be a string.",
+          },
+          { status: 400 }
+        );
+      }
+      if (note.trim().length > 2000) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Review note cannot exceed 2000 characters.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+    const sanitizedNote = typeof note === "string" ? note.trim() : "";
 
     const clusterId = new mongoose.Types.ObjectId(id);
     const existingCluster = await IssueCluster.findById(clusterId);

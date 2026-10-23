@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { IssueCluster } from "@/models/IssueCluster";
 import { Complaint } from "@/models/Complaint";
 import { Review } from "@/models/Review";
 import { PRIORITY_CONFIG, classifyPriority } from "@/lib/priority";
+import { isOfficialAuthenticatedRequest } from "@/lib/auth";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -14,7 +16,7 @@ export async function GET(request: Request, context: RouteContext) {
     await connectDB();
     const { id } = await context.params;
 
-    if (!id || id.length !== 24) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
         { success: false, error: "Invalid issue cluster identifier." },
         { status: 400 }
@@ -200,8 +202,26 @@ export async function GET(request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
+    if (!isOfficialAuthenticatedRequest(request)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized: Official demo access required to update priorities.",
+        },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const { id } = await context.params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid issue cluster identifier." },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json().catch(() => null);
 
     if (!body || typeof body !== "object") {
@@ -220,7 +240,18 @@ export async function PATCH(request: Request, context: RouteContext) {
       "resolved",
     ];
 
-    if (officialDecision && !allowedDecisions.includes(officialDecision)) {
+    if (!officialDecision || typeof officialDecision !== "string") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "officialDecision is required and must be a string.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const normalizedDecision = officialDecision.trim().toLowerCase();
+    if (!allowedDecisions.includes(normalizedDecision)) {
       return NextResponse.json(
         {
           success: false,
@@ -234,11 +265,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       id,
       {
         $set: {
-          officialDecision: officialDecision || "pending_review",
+          officialDecision: normalizedDecision,
           updatedAt: new Date(),
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!updated) {

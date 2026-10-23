@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { IssueCluster } from "@/models/IssueCluster";
 import { Complaint } from "@/models/Complaint";
 import { explainClusterWithGemini } from "@/lib/gemini";
+import { isOfficialAuthenticatedRequest } from "@/lib/auth";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -10,8 +12,25 @@ interface RouteContext {
 
 export async function POST(request: Request, context: RouteContext) {
   try {
+    if (!isOfficialAuthenticatedRequest(request)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized: Official demo access required to generate AI decision-support explanations.",
+        },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const { id } = await context.params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid issue cluster identifier." },
+        { status: 400 }
+      );
+    }
 
     const cluster = await IssueCluster.findById(id);
     if (!cluster) {

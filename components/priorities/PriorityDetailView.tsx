@@ -971,16 +971,22 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
               </p>
             </div>
 
-            <button
-              onClick={handleGenerateAiExplanation}
-              disabled={isGeneratingAi}
-              className="px-3 py-1.5 rounded border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer self-start sm:self-auto"
-            >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${isGeneratingAi ? "animate-spin" : ""}`}
-              />
-              <span>{cluster.aiExplanation ? "Regenerate Interpretation" : "Generate Interpretation"}</span>
-            </button>
+            {isOfficial ? (
+              <button
+                onClick={handleGenerateAiExplanation}
+                disabled={isGeneratingAi}
+                className="px-3 py-1.5 rounded border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer self-start sm:self-auto"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${isGeneratingAi ? "animate-spin" : ""}`}
+                />
+                <span>{cluster.aiExplanation ? "Regenerate Interpretation" : "Generate Interpretation"}</span>
+              </button>
+            ) : (
+              <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
+                Official AI Advisory
+              </span>
+            )}
           </div>
 
           {aiError && (
@@ -1003,7 +1009,9 @@ export default function PriorityDetailView({ clusterId, mode }: PriorityDetailVi
           ) : (
             <div className="py-6 text-center space-y-2">
               <p className="text-xs text-slate-500">
-                No automated interpretation generated yet. Click &ldquo;Generate Interpretation&rdquo; to review the decision-support brief.
+                {isOfficial
+                  ? "No automated interpretation generated yet. Click \u201CGenerate Interpretation\u201D to review the decision-support brief."
+                  : "No automated interpretation generated yet. Official decision-makers can generate one during review."}
               </p>
             </div>
           )}
