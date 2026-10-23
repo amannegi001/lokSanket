@@ -191,6 +191,10 @@ export async function GET() {
         kpis: {
           totalReports,
           totalClusters: clusters.length,
+          topPriorityScore:
+            clusters.length > 0 && typeof clusters[0].priorityScore === "number"
+              ? clusters[0].priorityScore
+              : null,
           highPriorityCount,
           mediumPriorityCount,
           lowPriorityCount,

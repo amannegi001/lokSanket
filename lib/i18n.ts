@@ -24,6 +24,7 @@ export interface Translations {
     statReports: string;
     statClusters: string;
     statLocalities: string;
+    statTopPriorityScore: string;
     demoData: string;
   };
   pipeline: {
@@ -271,6 +272,7 @@ export const translations: Record<Language, Translations> = {
       statReports: "citizen reports",
       statClusters: "issue clusters",
       statLocalities: "localities",
+      statTopPriorityScore: "highest priority score",
       demoData: "Realistic Demonstration Data",
     },
     pipeline: {
@@ -318,7 +320,7 @@ export const translations: Record<Language, Translations> = {
         "See how multiple citizen reports become an evidence-backed priority. LokSanket synthesizes 137 separate complaints from Ward 17 into an auditable intelligence dossier that public representatives can act upon.",
       bullet1: "Cross-verified across 5 residential localities to rule out single-location bias.",
       bullet2: "Ground truth verified by 18 resident-uploaded photographs of road breaches.",
-      bullet3: "Transparent 80.1 priority score calculated deterministically without LLM hallucination.",
+      bullet3: "Transparent priority score calculated deterministically without LLM hallucination.",
       dashboardLink: "Explore full development intelligence in dashboard",
       highPriority: "High Priority",
       category: "Road Infrastructure",
@@ -587,6 +589,7 @@ export const translations: Record<Language, Translations> = {
       statReports: "नागरिक शिकायतें",
       statClusters: "समस्या समूह",
       statLocalities: "क्षेत्र",
+      statTopPriorityScore: "शीर्ष प्राथमिकता स्कोर",
       demoData: "यथार्थवादी प्रदर्शन डेटा",
     },
     pipeline: {
@@ -634,7 +637,7 @@ export const translations: Record<Language, Translations> = {
         "देखें कि कैसे कई नागरिक शिकायतें साक्ष्य-समर्थित प्राथमिकता बन जाती हैं। LokSanket Ward 17 की 137 अलग-अलग शिकायतों को एक सत्यापन योग्य डोजियर में संकलित करता है जिस पर जनप्रतिनिधि विश्वास के साथ कार्रवाई कर सकते हैं।",
       bullet1: "एकल-स्थान पूर्वाग्रह को दूर करने के लिए 5 आवासीय क्षेत्रों में सत्यापित।",
       bullet2: "सड़क क्षति की 18 निवासियों द्वारा अपलोड की गई तस्वीरों से जमीनी हकीकत सत्यापित।",
-      bullet3: "बिना किसी त्रुटि के पारदर्शी 80.1 प्राथमिकता स्कोर की गणना।",
+      bullet3: "बिना किसी त्रुटि के पारदर्शी प्राथमिकता स्कोर की गणना।",
       dashboardLink: "डैशबोर्ड में संपूर्ण विकास इंटेलिजेंस देखें",
       highPriority: "उच्च प्राथमिकता",
       category: "सड़क अवसंरचना",

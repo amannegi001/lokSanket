@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -25,6 +26,58 @@ import {
 
 export default function LandingPage() {
   const { t } = useLanguage();
+
+  const [metrics, setMetrics] = useState<{
+    totalReports: string;
+    totalClusters: string;
+    topPriorityScore: string;
+  }>({
+    totalReports: "—",
+    totalClusters: "—",
+    topPriorityScore: "—",
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadLandingMetrics() {
+      try {
+        const res = await fetch("/api/dashboard");
+        if (!res.ok) return;
+        const json = await res.json();
+        if (isMounted && json.success && json.data?.kpis) {
+          const kpis = json.data.kpis;
+          const topScore =
+            typeof kpis.topPriorityScore === "number"
+              ? kpis.topPriorityScore
+              : typeof json.data.topClusters?.[0]?.priorityScore === "number"
+              ? json.data.topClusters[0].priorityScore
+              : null;
+
+          setMetrics({
+            totalReports:
+              typeof kpis.totalReports === "number"
+                ? kpis.totalReports.toLocaleString()
+                : "—",
+            totalClusters:
+              typeof kpis.totalClusters === "number"
+                ? kpis.totalClusters.toLocaleString()
+                : "—",
+            topPriorityScore:
+              typeof topScore === "number" ? topScore.toFixed(1) : "—",
+          });
+        }
+      } catch {
+        // Fall back gracefully to neutral unavailable state "—" without fabricated data
+      }
+    }
+
+    loadLandingMetrics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const stepIcons = [
     FileText,
@@ -129,11 +182,22 @@ export default function LandingPage() {
           {/* Subtle Supporting Statistics Row (No giant KPI cards) */}
           <div className="pt-8 border-t border-[#EEF0F5] max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 text-xs sm:text-sm text-slate-600">
             <div className="flex items-center gap-2 font-medium text-slate-700 flex-wrap justify-center">
-              <span><strong className="text-slate-900 font-bold">1,247</strong> {t.hero.statReports}</span>
+              <span>
+                <strong className="text-slate-900 font-bold">{metrics.totalReports}</strong>{" "}
+                {t.hero.statReports}
+              </span>
               <span className="text-slate-300">•</span>
-              <span><strong className="text-slate-900 font-bold">49</strong> {t.hero.statClusters}</span>
+              <span>
+                <strong className="text-slate-900 font-bold">{metrics.totalClusters}</strong>{" "}
+                {t.hero.statClusters}
+              </span>
               <span className="text-slate-300">•</span>
-              <span><strong className="text-slate-900 font-bold">86</strong> {t.hero.statLocalities}</span>
+              <span>
+                <strong className="text-slate-900 font-bold">
+                  {metrics.topPriorityScore !== "—" ? `${metrics.topPriorityScore} / 100` : "—"}
+                </strong>{" "}
+                {t.hero.statTopPriorityScore}
+              </span>
             </div>
             <span className="text-xs uppercase font-bold tracking-wider px-2.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200 shrink-0">
               {t.hero.demoData}
@@ -286,7 +350,10 @@ export default function LandingPage() {
                       {t.showcase.priorityScoreLabel}
                     </div>
                     <div className="text-3xl sm:text-4xl font-black text-slate-900">
-                      80.1 <span className="text-sm sm:text-base font-normal text-slate-400">/ 100</span>
+                      {metrics.topPriorityScore}{" "}
+                      <span className="text-sm sm:text-base font-normal text-slate-400">
+                        / 100
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -432,7 +499,9 @@ export default function LandingPage() {
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-2">{t.evidence.resultLabel}</span>
-                  <span className="text-lg font-black text-slate-900 font-mono">80.1 / 100</span>
+                  <span className="text-lg font-black text-slate-900 font-mono">
+                    {metrics.topPriorityScore !== "—" ? `${metrics.topPriorityScore} / 100` : "—"}
+                  </span>
                 </div>
               </div>
             </div>
