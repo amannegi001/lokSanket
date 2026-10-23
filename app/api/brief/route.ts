@@ -10,6 +10,7 @@ import {
 } from "@/lib/gemini";
 import { isOfficialAuthenticatedRequest } from "@/lib/auth";
 import { classifyPriority } from "@/lib/priority";
+import { getEffectiveReferenceDate, getTemporalWindows } from "@/lib/temporal";
 
 export async function GET() {
   try {
@@ -20,9 +21,11 @@ export async function GET() {
       IssueCluster.find().sort({ priorityScore: -1, reportCount: -1 }).limit(10).lean(),
     ]);
 
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    const refDate = await getEffectiveReferenceDate();
+    const windows = getTemporalWindows(refDate);
+
     const reportsLast14Days = await Complaint.countDocuments({
-      createdAt: { $gte: fourteenDaysAgo },
+      createdAt: { $gte: windows.recentThreshold, $lte: refDate },
     });
 
     const clusterIds = clusters.map((c) => c._id);
@@ -138,9 +141,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    const refDate = await getEffectiveReferenceDate();
+    const windows = getTemporalWindows(refDate);
+
     const reportsLast14Days = await Complaint.countDocuments({
-      createdAt: { $gte: fourteenDaysAgo },
+      createdAt: { $gte: windows.recentThreshold, $lte: refDate },
     });
 
     // 2. Build structured deterministic evidence payload

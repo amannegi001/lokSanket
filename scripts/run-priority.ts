@@ -11,6 +11,7 @@ try {
 import { Complaint } from "../models/Complaint";
 import { classifyPriority } from "../lib/priority";
 import { recalculateAndPersistPriorities } from "../lib/priority-persistence";
+import { getEffectiveReferenceDate } from "../lib/temporal";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -41,7 +42,7 @@ async function runPriorityPipeline() {
   console.log("\n-------------------------------------------------");
   console.log("CALCULATING & PERSISTING PRIORITY SCORES (PASS 1)...");
   console.log("-------------------------------------------------");
-  const referenceDate = new Date("2026-09-30T10:00:00.000Z");
+  const referenceDate = await getEffectiveReferenceDate();
   const pass1 = await recalculateAndPersistPriorities(referenceDate);
 
   console.log(`✓ Processed and scored ${pass1.totalClustersUpdated} IssueClusters.`);

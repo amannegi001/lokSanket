@@ -1,4 +1,5 @@
 import { Complaint } from "@/models/Complaint";
+import { getEffectiveReferenceDate, getTemporalWindows } from "./temporal";
 
 export interface CategorySummary {
   category: string;
@@ -81,12 +82,10 @@ export interface ConstituencySummary {
  * recent vs. previous temporal trends, and photo counts directly from stored Complaint documents.
  */
 export async function aggregateConstituencySummary(
-  referenceDate: Date = new Date()
+  referenceDate?: Date
 ): Promise<ConstituencySummary> {
-  const refTime = referenceDate.getTime();
-  const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
-  const recentThreshold = new Date(refTime - fourteenDaysMs);
-  const previousThreshold = new Date(refTime - 2 * fourteenDaysMs);
+  const effectiveRefDate = await getEffectiveReferenceDate(referenceDate);
+  const windows = getTemporalWindows(effectiveRefDate);
 
   const [
     totalReports,
@@ -134,12 +133,12 @@ export async function aggregateConstituencySummary(
 
     // 5. Recent report volume (last 14 days)
     Complaint.countDocuments({
-      createdAt: { $gte: recentThreshold, $lte: referenceDate },
+      createdAt: { $gte: windows.recentThreshold, $lte: windows.refDate },
     }),
 
     // 6. Previous-period report volume (15-28 days ago)
     Complaint.countDocuments({
-      createdAt: { $gte: previousThreshold, $lt: recentThreshold },
+      createdAt: { $gte: windows.previousThreshold, $lt: windows.recentThreshold },
     }),
 
     // 7. Photo evidence count
@@ -238,12 +237,9 @@ export async function aggregateCategoryWardEvidence(options: {
   ward: string;
   referenceDate?: Date;
 }): Promise<CategoryWardEvidence> {
-  const { category, ward, referenceDate = new Date() } = options;
-
-  const refTime = referenceDate.getTime();
-  const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
-  const recentThreshold = new Date(refTime - fourteenDaysMs);
-  const previousThreshold = new Date(refTime - 2 * fourteenDaysMs);
+  const { category, ward, referenceDate } = options;
+  const effectiveRefDate = await getEffectiveReferenceDate(referenceDate);
+  const windows = getTemporalWindows(effectiveRefDate);
 
   // Match condition for this category & ward slice
   const matchFilter = {
@@ -280,12 +276,12 @@ export async function aggregateCategoryWardEvidence(options: {
 
     Complaint.countDocuments({
       ...matchFilter,
-      createdAt: { $gte: recentThreshold, $lte: referenceDate },
+      createdAt: { $gte: windows.recentThreshold, $lte: windows.refDate },
     }),
 
     Complaint.countDocuments({
       ...matchFilter,
-      createdAt: { $gte: previousThreshold, $lt: recentThreshold },
+      createdAt: { $gte: windows.previousThreshold, $lt: windows.recentThreshold },
     }),
 
     Complaint.countDocuments({

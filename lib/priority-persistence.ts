@@ -14,6 +14,7 @@ import {
   normalizeString,
   RawClusterGroup,
 } from "./clustering";
+import { getEffectiveReferenceDate } from "./temporal";
 
 /**
  * Connects to MongoDB, processes all complaints, updates/persists
@@ -41,12 +42,8 @@ export async function recalculateAndPersistPriorities(
     };
   }
 
-  // Anchor temporal window to referenceDate, env variable, or 2026-09-30 demonstration baseline
-  const effectiveRefDate =
-    referenceDate ??
-    (process.env.PRIORITY_REFERENCE_DATE
-      ? new Date(process.env.PRIORITY_REFERENCE_DATE)
-      : new Date("2026-09-30T10:00:00.000Z"));
+  // Anchor temporal window using canonical reference date resolution
+  const effectiveRefDate = await getEffectiveReferenceDate(referenceDate);
 
   const calculatedClusters = processComplaintsPipeline(complaints, effectiveRefDate);
 
@@ -188,11 +185,7 @@ export async function assignComplaintToClusterAndRecalculate(
   const maxCluster = await IssueCluster.findOne().sort({ reportCount: -1 }).select("reportCount").lean();
   const currentMax = maxCluster?.reportCount || 100;
 
-  const effectiveRefDate =
-    referenceDate ??
-    (process.env.PRIORITY_REFERENCE_DATE
-      ? new Date(process.env.PRIORITY_REFERENCE_DATE)
-      : new Date());
+  const effectiveRefDate = await getEffectiveReferenceDate(referenceDate);
 
   let clusterDoc: IIssueCluster;
   let isNewCluster = false;

@@ -5,10 +5,14 @@ import { IssueCluster } from "@/models/IssueCluster";
 import { Review } from "@/models/Review";
 import { sanitizeLocality } from "@/lib/clustering";
 import { classifyPriority } from "@/lib/priority";
+import { getEffectiveReferenceDate, getTemporalWindows } from "@/lib/temporal";
 
 export async function GET() {
   try {
     await connectDB();
+
+    const refDate = await getEffectiveReferenceDate();
+    const windows = getTemporalWindows(refDate);
 
     // 1. Fetch high-level KPIs, cluster summary, recent reports, and canonical reviews from MongoDB
     const [
@@ -35,10 +39,11 @@ export async function GET() {
       // D. Distinct affected localities
       Complaint.distinct("location"),
 
-      // D. Reports in active month cycle (last 30 days)
+      // D. Reports in active month cycle (last 30 days bounded by reference date)
       Complaint.countDocuments({
         createdAt: {
-          $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          $gte: windows.monthlyThreshold,
+          $lte: refDate,
         },
       }),
 
@@ -53,12 +58,13 @@ export async function GET() {
         { $sort: { count: -1 } },
       ]),
 
-      // F. Trend timeline (daily counts across the last 28 days)
+      // F. Trend timeline (daily counts across the 28-day window up to reference date)
       Complaint.aggregate([
         {
           $match: {
             createdAt: {
-              $gte: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+              $gte: windows.timelineThreshold,
+              $lte: refDate,
             },
           },
         },
@@ -200,6 +206,7 @@ export async function GET() {
           isSynthetic: true,
           label: "Realistic Demonstration Data",
           constituency: "Central Demonstration Constituency (Ward 1–25)",
+          referenceDate: refDate.toISOString(),
           disclaimer:
             "Civic intelligence generated from realistic demonstration complaint records for development decision support.",
         },
